@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>五組接力打怪獸｜五年級多步驟計算</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+    body { margin: 0; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; background: #0f172a; color: #f8fafc; overflow-x: hidden; }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px) rotate(-1.5deg); }
+      40% { transform: translateX(8px) rotate(1.5deg); }
+      60% { transform: translateX(-6px); }
+      80% { transform: translateX(6px); }
+    }
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translate(-50%, 0) scale(0.85); }
+      30% { opacity: 1; transform: translate(-50%, -22px) scale(1.18); }
+      100% { opacity: 0; transform: translate(-50%, -62px) scale(1); }
+    }
+    @keyframes monsterIdle {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-5px); }
+    }
+    @keyframes ultimatePulse {
+      0% { opacity: 0; transform: scale(0.7); }
+      25% { opacity: 1; transform: scale(1.06); }
+      80% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(0.95); }
+    }
+    .animate-shake { animation: shake 0.36s ease-in-out; }
+    .animate-float-dmg { animation: floatUp 1.05s ease-out forwards; }
+    .animate-monster-idle { animation: monsterIdle 2.4s ease-in-out infinite; }
+    .animate-ultimate { animation: ultimatePulse 1.8s ease-out forwards; }
+  </style>
+</head>
+<body>
+  <div id="app" class="min-h-screen flex flex-col justify-between p-2.5 gap-2 bg-gradient-to-b from-slate-950 via-slate-900 to-indigo-950"></div>
+
+  <script>
+    const QUESTION_BANK = [
+      // ★1 基礎型（120 傷）
+      { id: 'n1', stars: 1, category: '連加湊整', text: '135 + 165 + 240 = ?', options: [540, 530, 550, 440], answer: 540, hint: '先算 135 + 165 = 300，再算 300 + 240 = 540' },
+      { id: 'n2', stars: 1, category: '連加湊整', text: '76 + 189 + 124 = ?', options: [389, 379, 399, 289], answer: 389, hint: '先算 76 + 124 = 200，再算 200 + 189 = 389' },
+      { id: 'n3', stars: 1, category: '連減性質', text: '600 − 145 − 155 = ?', options: [300, 400, 310, 290], answer: 300, hint: '先算 145 + 155 = 300，再用 600 − 300 = 300' },
+      { id: 'n4', stars: 1, category: '連減性質', text: '750 − 230 − 170 = ?', options: [350, 450, 360, 250], answer: 350, hint: '先算 230 + 170 = 400，再用 750 − 400 = 350' },
+      { id: 'n5', stars: 1, category: '加減巧算', text: '428 + 195 − 128 = ?', options: [495, 505, 395, 485], answer: 495, hint: '先算 428 − 128 = 300，再算 300 + 195 = 495' },
+      { id: 'n6', stars: 1, category: '加減巧算', text: '563 − 240 − 163 = ?', options: [160, 260, 170, 150], answer: 160, hint: '先算 563 − 163 = 400，再算 400 − 240 = 160' },
+      { id: 'n7', stars: 1, category: '乘加混合', text: '45 × 4 + 35 × 2 = ?', options: [250, 230, 270, 180], answer: 250, hint: '45 × 4 = 180，35 × 2 = 70，180 + 70 = 250' },
+      { id: 'n8', stars: 1, category: '乘加混合', text: '25 × 6 + 40 × 4 = ?', options: [310, 290, 330, 210], answer: 310, hint: '25 × 6 = 150，40 × 4 = 160，150 + 160 = 310' },
+      { id: 'n9', stars: 1, category: '乘減混合', text: '90 × 5 − 180 = ?', options: [270, 630, 260, 280], answer: 270, hint: '先算 90 × 5 = 450，再算 450 − 180 = 270' },
+      { id: 'n10', stars: 1, category: '乘減混合', text: '65 × 4 − 120 = ?', options: [140, 380, 130, 150], answer: 140, hint: '先算 65 × 4 = 260，再算 260 − 120 = 140' },
+      { id: 'n11', stars: 1, category: '除加混合', text: '420 ÷ 7 + 85 = ?', options: [145, 60, 155, 135], answer: 145, hint: '先算 420 ÷ 7 = 60，再算 60 + 85 = 145' },
+      { id: 'n12', stars: 1, category: '除減混合', text: '540 ÷ 6 − 45 = ?', options: [45, 90, 135, 55], answer: 45, hint: '先算 540 ÷ 6 = 90，再算 90 − 45 = 45' },
+      { id: 'n13', stars: 1, category: '連除基礎', text: '480 ÷ 8 ÷ 6 = ?', options: [10, 60, 80, 12], answer: 10, hint: '480 ÷ 8 = 60，再算 60 ÷ 6 = 10' },
+      { id: 'n14', stars: 1, category: '連除基礎', text: '360 ÷ 4 ÷ 9 = ?', options: [10, 90, 40, 15], answer: 10, hint: '360 ÷ 4 = 90，再算 90 ÷ 9 = 10' },
+      { id: 'n15', stars: 1, category: '括號先算', text: '(140 + 160) ÷ 15 = ?', options: [20, 30, 15, 25], answer: 20, hint: '先算括號 140 + 160 = 300，再算 300 ÷ 15 = 20' },
+
+      // ★2 巧算型（240 傷）
+      { id: 'n16', stars: 2, category: '連加湊整', text: '128 + 235 + 172 + 165 = ?', options: [700, 600, 690, 710], answer: 700, hint: '(128 + 172) + (235 + 165) = 300 + 400 = 700' },
+      { id: 'n17', stars: 2, category: '連加湊整', text: '314 + 188 + 186 + 112 = ?', options: [800, 700, 790, 810], answer: 800, hint: '(314 + 186) + (188 + 112) = 500 + 300 = 800' },
+      { id: 'n18', stars: 2, category: '連減性質', text: '900 − 164 − 236 − 120 = ?', options: [380, 500, 480, 360], answer: 380, hint: '164 + 236 = 400，900 − 400 − 120 = 380' },
+      { id: 'n19', stars: 2, category: '連減性質', text: '850 − 192 − 108 − 150 = ?', options: [400, 550, 410, 390], answer: 400, hint: '192 + 108 = 300，850 − 300 − 150 = 400' },
+      { id: 'n20', stars: 2, category: '加減抵消', text: '680 − 259 − 141 + 259 = ?', options: [539, 280, 798, 549], answer: 539, hint: '−259 和 +259 抵消，680 − 141 = 539' },
+      { id: 'n21', stars: 2, category: '加減抵消', text: '920 − 378 − 122 + 378 = ?', options: [798, 420, 1176, 808], answer: 798, hint: '−378 和 +378 抵消，920 − 122 = 798' },
+      { id: 'n22', stars: 2, category: '加減巧算', text: '517 − 198 − 102 − 117 = ?', options: [100, 200, 110, 90], answer: 100, hint: '517 − 117 = 400，198 + 102 = 300，400 − 300 = 100' },
+      { id: 'n23', stars: 2, category: '連除交換', text: '4500 ÷ 5 ÷ 45 = ?', options: [20, 100, 900, 25], answer: 20, hint: '先算 4500 ÷ 45 = 100，再算 100 ÷ 5 = 20' },
+      { id: 'n24', stars: 2, category: '連除交換', text: '5200 ÷ 4 ÷ 52 = ?', options: [25, 100, 1300, 20], answer: 25, hint: '先算 5200 ÷ 52 = 100，再算 100 ÷ 4 = 25' },
+      { id: 'n25', stars: 2, category: '連除交換', text: '6400 ÷ 10 ÷ 64 = ?', options: [10, 100, 640, 16], answer: 10, hint: '先算 6400 ÷ 64 = 100，再算 100 ÷ 10 = 10' },
+      { id: 'n26', stars: 2, category: '連除交換', text: '7500 ÷ 4 ÷ 75 = ?', options: [25, 100, 1875, 20], answer: 25, hint: '先算 7500 ÷ 75 = 100，再算 100 ÷ 4 = 25' },
+      { id: 'n27', stars: 2, category: '分層裝箱', text: '1800 ÷ 25 ÷ 18 = ?', options: [4, 72, 100, 8], answer: 4, hint: '先算 1800 ÷ 18 = 100，再算 100 ÷ 25 = 4' },
+      { id: 'n28', stars: 2, category: '分層裝箱', text: '3200 ÷ 20 ÷ 32 = ?', options: [5, 160, 100, 10], answer: 5, hint: '先算 3200 ÷ 32 = 100，再算 100 ÷ 20 = 5' },
+      { id: 'n29', stars: 2, category: '乘加巧算', text: '36 × 7 + 64 × 7 = ?', options: [700, 600, 252, 448], answer: 700, hint: '(36 + 64) × 7 = 100 × 7 = 700' },
+      { id: 'n30', stars: 2, category: '乘加巧算', text: '43 × 9 + 57 × 9 = ?', options: [900, 800, 387, 513], answer: 900, hint: '(43 + 57) × 9 = 100 × 9 = 900' },
+      { id: 'n31', stars: 2, category: '乘減巧算', text: '84 × 6 − 34 × 6 = ?', options: [300, 504, 204, 708], answer: 300, hint: '(84 − 34) × 6 = 50 × 6 = 300' },
+      { id: 'n32', stars: 2, category: '乘減巧算', text: '92 × 5 − 42 × 5 = ?', options: [250, 460, 210, 670], answer: 250, hint: '(92 − 42) × 5 = 50 × 5 = 250' },
+      { id: 'n33', stars: 2, category: '找零計算', text: '1000 − (185 × 2 + 230) = ?', options: [400, 600, 415, 585], answer: 400, hint: '185 × 2 + 230 = 370 + 230 = 600，1000 − 600 = 400' },
+      { id: 'n34', stars: 2, category: '找零計算', text: '1500 − (260 × 3 + 120) = ?', options: [600, 900, 780, 1120], answer: 600, hint: '260 × 3 + 120 = 780 + 120 = 900，1500 − 900 = 600' },
+      { id: 'n35', stars: 2, category: '括號先算', text: '840 ÷ (14 × 3) = ?', options: [20, 180, 60, 40], answer: 20, hint: '先算 14 × 3 = 42，再算 840 ÷ 42 = 20' },
+
+      // ★3 魔王型（380 傷）
+      { id: 'n36', stars: 3, category: '連除交換', text: '8100 ÷ 5 ÷ 81 = ?', options: [20, 100, 1620, 25], answer: 20, hint: '先算 8100 ÷ 81 = 100，再算 100 ÷ 5 = 20' },
+      { id: 'n37', stars: 3, category: '連除交換', text: '9200 ÷ 4 ÷ 92 = ?', options: [25, 100, 2300, 20], answer: 25, hint: '先算 9200 ÷ 92 = 100，再算 100 ÷ 4 = 25' },
+      { id: 'n38', stars: 3, category: '分層裝箱', text: '2400 ÷ 25 ÷ 4 ÷ 8 = ?', options: [3, 24, 96, 12], answer: 3, hint: '25 × 4 = 100，2400 ÷ 100 = 24，24 ÷ 8 = 3' },
+      { id: 'n39', stars: 3, category: '分層裝箱', text: '3000 ÷ 20 ÷ 5 ÷ 6 = ?', options: [5, 30, 150, 15], answer: 5, hint: '20 × 5 = 100，3000 ÷ 100 = 30，30 ÷ 6 = 5' },
+      { id: 'n40', stars: 3, category: '分層裝箱', text: '4200 ÷ 25 ÷ 4 ÷ 7 = ?', options: [6, 42, 168, 14], answer: 6, hint: '25 × 4 = 100，4200 ÷ 100 = 42，42 ÷ 7 = 6' },
+      { id: 'n41', stars: 3, category: '倍數找零', text: '2000 − 360 × (12 ÷ 4) = ?', options: [920, 1080, 1640, 820], answer: 920, hint: '12 ÷ 4 = 3 倍，360 × 3 = 1080，2000 − 1080 = 920' },
+      { id: 'n42', stars: 3, category: '倍數找零', text: '1800 − 420 × (15 ÷ 5) = ?', options: [540, 1260, 1380, 640], answer: 540, hint: '15 ÷ 5 = 3 倍，420 × 3 = 1260，1800 − 1260 = 540' },
+      { id: 'n43', stars: 3, category: '倍數找零', text: '2500 − 550 × (16 ÷ 4) = ?', options: [300, 2200, 1950, 400], answer: 300, hint: '16 ÷ 4 = 4 倍，550 × 4 = 2200，2500 − 2200 = 300' },
+      { id: 'n44', stars: 3, category: '倍數計算', text: '540 ÷ (18 ÷ 3) × 4 = ?', options: [360, 90, 30, 180], answer: 360, hint: '18 ÷ 3 = 6，540 ÷ 6 = 90，90 × 4 = 360' },
+      { id: 'n45', stars: 3, category: '倍數計算', text: '640 ÷ (16 ÷ 2) × 5 = ?', options: [400, 80, 40, 200], answer: 400, hint: '16 ÷ 2 = 8，640 ÷ 8 = 80，80 × 5 = 400' },
+      { id: 'n46', stars: 3, category: '乘除巧算', text: '125 × 32 ÷ 8 × 3 = ?', options: [1500, 500, 4000, 1000], answer: 1500, hint: '32 ÷ 8 = 4，125 × 4 = 500，500 × 3 = 1500' },
+      { id: 'n47', stars: 3, category: '乘除巧算', text: '25 × 28 ÷ 7 × 6 = ?', options: [600, 100, 700, 400], answer: 600, hint: '28 ÷ 7 = 4，25 × 4 = 100，100 × 6 = 600' },
+      { id: 'n48', stars: 3, category: '多步巧算', text: '1250 − 245 − 255 − 150 = ?', options: [600, 750, 500, 650], answer: 600, hint: '245 + 255 = 500，1250 − 500 − 150 = 600' },
+      { id: 'n49', stars: 3, category: '多步巧算', text: '475 + 368 + 225 + 132 = ?', options: [1200, 1100, 1190, 1210], answer: 1200, hint: '(475 + 225) + (368 + 132) = 700 + 500 = 1200' },
+      { id: 'n50', stars: 3, category: '禮盒採買', text: '買 6 盒禮盒每盒 350 元，付 2500 元找回幾元？', options: [400, 2100, 300, 500], answer: 400, hint: '2500 − 350 × 6 = 2500 − 2100 = 400 元' },
+
+      // 生活情境應用題（15 題）
+      { id: 'w1', stars: 2, category: '市集找零', text: '帶 800 元買 145 元書、255 元筆袋與 120 元尺，剩幾元？', options: [280, 400, 380, 180], answer: 280, hint: '先算總花費 (145 + 255) + 120 = 400 + 120 = 520 元，800 − 520 = 280 元' },
+      { id: 'w2', stars: 2, category: '超商採買', text: '付 1000 元買 268 元水果、132 元牛奶與 185 元麵包，找回幾元？', options: [415, 600, 585, 315], answer: 415, hint: '先算 (268 + 132) + 185 = 400 + 185 = 585 元，1000 − 585 = 415 元' },
+      { id: 'w3', stars: 2, category: '分層裝箱', text: '1600 顆糖果，每 20 顆裝一袋，每 16 袋裝一箱，可裝幾箱？', options: [5, 80, 100, 10], answer: 5, hint: '先算 1600 ÷ 16 = 100 袋，再算 100 ÷ 20 = 5 箱' },
+      { id: 'w4', stars: 3, category: '分層裝箱', text: '3600 支鉛筆，每 25 支一盒，每 4 盒一打，每 6 打一箱，共幾箱？', options: [6, 36, 144, 12], answer: 6, hint: '一箱有 25 × 4 × 6 = 600 支，3600 ÷ 600 = 6 箱' },
+      { id: 'w5', stars: 3, category: '倍數找零', text: '4 個蛋塔賣 180 元，買 12 個付 1000 元，可找回幾元？', options: [460, 540, 820, 360], answer: 460, hint: '12 個是 4 個的 3 倍，花費 180 × 3 = 540 元，1000 − 540 = 460 元' },
+      { id: 'w6', stars: 3, category: '倍數找零', text: '5 顆蘋果賣 220 元，買 15 顆付 1000 元，可找回幾元？', options: [340, 660, 780, 440], answer: 340, hint: '15 顆是 5 顆的 3 倍，花費 220 × 3 = 660 元，1000 − 660 = 340 元' },
+      { id: 'w7', stars: 3, category: '倍數找零', text: '6 瓶果汁賣 250 元，買 24 瓶付 1500 元，可找回幾元？', options: [500, 1000, 1250, 600], answer: 500, hint: '24 瓶是 6 瓶的 4 倍，花費 250 × 4 = 1000 元，1500 − 1000 = 500 元' },
+      { id: 'w8', stars: 2, category: '烘焙分工', text: '480 個麵包由 3 位師傅做，每人每次烤 40 個，每人要烤幾次？', options: [4, 12, 160, 8], answer: 4, hint: '先算 480 ÷ 40 = 12 次，再分給 3 人：12 ÷ 3 = 4 次' },
+      { id: 'w9', stars: 2, category: '工廠包裝', text: '720 塊餅乾由 4 條產線包裝，每條每次包 36 塊，每條要包幾次？', options: [5, 20, 180, 10], answer: 5, hint: '先算 720 ÷ 36 = 20 次，再算 20 ÷ 4 = 5 次' },
+      { id: 'w10', stars: 2, category: '早餐帳單', text: '漢堡一份 55 元、紅茶一杯 25 元，各買 6 份共要付幾元？', options: [480, 355, 180, 420], answer: 480, hint: '一組 (55 + 25) = 80 元，買 6 組共 80 × 6 = 480 元' },
+      { id: 'w11', stars: 2, category: '文具採購', text: '筆記本一本 45 元、原子筆一支 15 元，各買 8 份共花幾元？', options: [480, 375, 165, 520], answer: 480, hint: '一組 (45 + 15) = 60 元，8 份共 60 × 8 = 480 元' },
+      { id: 'w12', stars: 3, category: '海產禮盒', text: '烏魚子禮盒每盒 650 元，買 2 盒並加購 300 元干貝，付 2000 元找幾元？', options: [400, 1600, 1050, 700], answer: 400, hint: '總花費 650 × 2 + 300 = 1300 + 300 = 1600 元，2000 − 1600 = 400 元' },
+      { id: 'w13', stars: 3, category: '園遊會', text: '園遊會收入 2400 元，扣掉材料費 680 元與 320 元，剩餘平分 4 組，每組得幾元？', options: [350, 1400, 510, 450], answer: 350, hint: '先算剩餘 2400 − (680 + 320) = 1400 元，1400 ÷ 4 = 350 元' },
+      { id: 'w14', stars: 3, category: '圖書整理', text: '1500 本書每 25 本一疊，每 4 疊放一層，每個書櫃有 5 層，可放滿幾個書櫃？', options: [3, 15, 60, 5], answer: 3, hint: '一個書櫃可放 25 × 4 × 5 = 500 本，1500 ÷ 500 = 3 個書櫃' },
+      { id: 'w15', stars: 2, category: '社團經費', text: '社團有 1200 元，買 4 顆排球每顆 220 元後，剩下的錢剛好買 8 瓶水，每瓶水幾元？', options: [40, 320, 880, 50], answer: 40, hint: '剩餘 1200 − 220 × 4 = 320 元，每瓶水 320 ÷ 8 = 40 元' }
+    ];
+
+    const GROUPS_META = [
+      { id: 1, name: '第 1 組', team: '烈焰隊', badgeBg: 'bg-rose-500', border: 'border-rose-500/75', headerBg: 'from-rose-600/95 to-rose-800/95', btnHover: 'hover:border-rose-400 hover:bg-rose-500/15', batonBg: 'bg-rose-500/20 border-rose-400 text-rose-200' },
+      { id: 2, name: '第 2 組', team: '疾風隊', badgeBg: 'bg-sky-500', border: 'border-sky-500/75', headerBg: 'from-sky-600/95 to-sky-800/95', btnHover: 'hover:border-sky-400 hover:bg-sky-500/15', batonBg: 'bg-sky-500/20 border-sky-400 text-sky-200' },
+      { id: 3, name: '第 3 組', team: '森靈隊', badgeBg: 'bg-emerald-500', border: 'border-emerald-500/75', headerBg: 'from-emerald-600/95 to-emerald-800/95', btnHover: 'hover:border-emerald-400 hover:bg-emerald-500/15', batonBg: 'bg-emerald-500/20 border-emerald-400 text-emerald-200' },
+      { id: 4, name: '第 4 組', team: '雷光隊', badgeBg: 'bg-amber-500', border: 'border-amber-500/75', headerBg: 'from-amber-600/95 to-amber-800/95', btnHover: 'hover:border-amber-400 hover:bg-amber-500/15', batonBg: 'bg-amber-500/20 border-amber-400 text-amber-200' },
+      { id: 5, name: '第 5 組', team: '幻紫隊', badgeBg: 'bg-violet-500', border: 'border-violet-500/75', headerBg: 'from-violet-600/95 to-violet-800/95', btnHover: 'hover:border-violet-400 hover:bg-violet-500/15', batonBg: 'bg-violet-500/20 border-violet-400 text-violet-200' }
+    ];
+
+    const STAR_BASE_DAMAGE = { 1: 120, 2: 240, 3: 380 };
+    const ULTIMATE_BONUS_DAMAGE = 1000;
+
+    let audioCtx = null;
+    function playTone(type) {
+      if (!state.soundEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = audioCtx.currentTime;
+        if (type === 'hit') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.exponentialRampToValueAtTime(560, now + 0.14);
+          gain.gain.setValueAtTime(0.16, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
+          osc.start(now); osc.stop(now + 0.16);
+        } else if (type === 'ultimate') {
+          [330, 440, 554.37, 659.25, 880].forEach((freq, idx) => {
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.connect(g); g.connect(audioCtx.destination);
+            o.type = 'sawtooth';
+            o.frequency.setValueAtTime(freq, now + idx * 0.06);
+            g.gain.setValueAtTime(0.14, now + idx * 0.06);
+            g.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.06 + 0.25);
+            o.start(now + idx * 0.06); o.stop(now + idx * 0.06 + 0.25);
+          });
+        } else if (type === 'wrong') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(170, now);
+          osc.frequency.linearRampToValueAtTime(105, now + 0.24);
+          gain.gain.setValueAtTime(0.14, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+          osc.start(now); osc.stop(now + 0.25);
+        } else if (type === 'win') {
+          [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.connect(g); g.connect(audioCtx.destination);
+            o.type = 'triangle';
+            o.frequency.setValueAtTime(freq, now + idx * 0.11);
+            g.gain.setValueAtTime(0.15, now + idx * 0.11);
+            g.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.11 + 0.24);
+            o.start(now + idx * 0.11); o.stop(now + idx * 0.11 + 0.24);
+          });
+        }
+      } catch (e) {}
+    }
+
+    function pickQuestion(excludeIds = []) {
+      const pool = QUESTION_BANK.filter(q => !excludeIds.includes(q.id));
+      const source = pool.length > 0 ? pool : QUESTION_BANK;
+      const wordPool = source.filter(q => q.id.startsWith('w'));
+      const numPool = source.filter(q => !q.id.startsWith('w'));
+      const pickFrom = (Math.random() < 0.45 && wordPool.length > 0) ? wordPool : (numPool.length > 0 ? numPool : source);
+      const q = pickFrom[Math.floor(Math.random() * pickFrom.length)];
+      const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
+      return { ...q, shuffledOptions, startedAt: Date.now() };
+    }
+
+    function initGroups() {
+      const used = [];
+      return GROUPS_META.map(meta => {
+        const q = pickQuestion(used);
+        used.push(q.id);
+        return {
+          ...meta,
+          damage: 0,
+          combo: 0,
+          correctCount: 0,
+          wrongCount: 0,
+          currentRunner: 1,
+          ultimateCount: 0,
+          question: q,
+          eliminatedOptions: [],
+          freezeUntil: 0
+        };
+      });
+    }
+
+    let state = {
+      maxHp: 8000,
+      hp: 8000,
+      teamSize: 6,
+      paused: false,
+      ended: false,
+      soundEnabled: true,
+      bannerText: '接力規則：每答對 1 題換下一棒上台按！全組輪完一輪發動「合體大招 +1000 傷」！',
+      monsterHit: false,
+      floatingDamages: [],
+      ultimateAlert: null,
+      errorLogs: [],
+      reviewTab: 'byQuestion',
+      selectedReviewQId: null,
+      showHintInReview: false,
+      groups: initGroups()
+    };
+
+    function getSpeedMultiplier(startedAt) {
+      const elapsedSec = (Date.now() - startedAt) / 1000;
+      if (elapsedSec <= 15) return { mult: 1.5, label: '神速 ×1.5', barClass: 'bg-emerald-400', pct: Math.max(15, 100 - (elapsedSec / 30) * 100) };
+      if (elapsedSec <= 30) return { mult: 1.2, label: '敏捷 ×1.2', barClass: 'bg-amber-400', pct: Math.max(8, 100 - (elapsedSec / 30) * 100) };
+      return { mult: 1.0, label: '穩定 ×1.0', barClass: 'bg-rose-400', pct: 8 };
+    }
+
+    function spawnFloatingDamage(groupId, amount, isUltimate = false) {
+      const id = Date.now() + Math.random();
+      const leftPct = 10 + (groupId - 1) * 20;
+      state.floatingDamages.push({ id, amount, leftPct, isUltimate });
+      render();
+      setTimeout(() => {
+        state.floatingDamages = state.floatingDamages.filter(f => f.id !== id);
+        render();
+      }, 1050);
+    }
+
+    function triggerUltimateBanner(groupName, teamName) {
+      state.ultimateAlert = `🔥 ${groupName}（${teamName}）全員接力完成！發動合體大招 -${ULTIMATE_BONUS_DAMAGE}！`;
+      render();
+      setTimeout(() => {
+        state.ultimateAlert = null;
+        render();
+      }, 1800);
+    }
+
+    function handleAnswer(groupId, chosenValue) {
+      if (state.paused || state.ended) return;
+      const g = state.groups.find(item => item.id === groupId);
+      if (!g) return;
+      const now = Date.now();
+      if (g.freezeUntil > now) return;
+      if (g.eliminatedOptions.includes(chosenValue)) return;
+
+      const activeIds = state.groups.map(item => item.question.id);
+      const runnerNo = g.currentRunner;
+
+      if (chosenValue === g.question.answer) {
+        const { mult } = getSpeedMultiplier(g.question.startedAt);
+        const comboBonus = 1 + Math.min(g.combo, 5) * 0.05;
+        const baseHit = Math.round(STAR_BASE_DAMAGE[g.question.stars] * mult * comboBonus);
+
+        const completedFullLap = runnerNo >= state.teamSize;
+        const bonusDmg = completedFullLap ? ULTIMATE_BONUS_DAMAGE : 0;
+        const totalAttemptDmg = baseHit + bonusDmg;
+        const actualDmg = Math.min(state.hp, totalAttemptDmg);
+
+        g.damage += actualDmg;
+        g.combo += 1;
+        g.correctCount += 1;
+        g.eliminatedOptions = [];
+        state.hp = Math.max(0, state.hp - actualDmg);
+        state.monsterHit = true;
+
+        if (completedFullLap) {
+          g.currentRunner = 1;
+          g.ultimateCount += 1;
+          state.bannerText = `💥 ${g.name}第 ${runnerNo} 棒壓軸命中！全員輪完一輪，發動合體大招暴擊 ${actualDmg} 傷！請換第 1 棒準備！`;
+          playTone('ultimate');
+          spawnFloatingDamage(g.id, actualDmg, true);
+          triggerUltimateBanner(g.name, g.team);
+        } else {
+          g.currentRunner = runnerNo + 1;
+          state.bannerText = `⚔️ ${g.name}第 ${runnerNo} 棒答對（-${actualDmg} 傷）！請交棒給【第 ${g.currentRunner} 棒】上台！`;
+          playTone('hit');
+          spawnFloatingDamage(g.id, actualDmg, false);
+        }
+
+        setTimeout(() => {
+          state.monsterHit = false;
+          render();
+        }, 360);
+
+        if (state.hp <= 0) {
+          state.ended = true;
+          playTone('win');
+          const topErr = getWrongQuestionStats()[0];
+          state.selectedReviewQId = topErr ? topErr.question.id : null;
+          render();
+          return;
+        }
+
+        g.question = pickQuestion(activeIds);
+        render();
+      } else {
+        g.combo = 0;
+        g.wrongCount += 1;
+        g.eliminatedOptions.push(chosenValue);
+        g.freezeUntil = now + 4000;
+        state.bannerText = `❄️ ${g.name}第 ${runnerNo} 棒誤選「${chosenValue}」，冷卻 4 秒！台下組員快幫忙檢查算式！`;
+        playTone('wrong');
+        state.errorLogs.push({
+          id: now + Math.random(),
+          groupId: g.id,
+          groupName: `${g.name}（第 ${runnerNo} 棒）`,
+          question: g.question,
+          chosenValue,
+          correctAnswer: g.question.answer
+        });
+        render();
+      }
+    }
+
+    function changeTeamSize(newSize) {
+      state.teamSize = newSize;
+      state.groups.forEach(g => {
+        if (g.currentRunner > newSize) g.currentRunner = 1;
+      });
+      state.bannerText = `已調整為每組 ${newSize} 人接力制！輪完 ${newSize} 棒即發動合體大招！`;
+      render();
+    }
+
+    function resetGame(newMaxHp = state.maxHp) {
+      state = {
+        maxHp: newMaxHp,
+        hp: newMaxHp,
+        teamSize: state.teamSize,
+        paused: false,
+        ended: false,
+        soundEnabled: state.soundEnabled,
+        bannerText: `新回合開始（總血量 ${newMaxHp}）！每組請派【第 1 棒】先出戰！`,
+        monsterHit: false,
+        floatingDamages: [],
+        ultimateAlert: null,
+        errorLogs: [],
+        reviewTab: 'byQuestion',
+        selectedReviewQId: null,
+        showHintInReview: false,
+        groups: initGroups()
+      };
+      render();
+    }
+
+    function finishBattleNow() {
+      state.ended = true;
+      const topErr = getWrongQuestionStats()[0];
+      state.selectedReviewQId = topErr ? topErr.question.id : null;
+      render();
+    }
+
+    function getWrongQuestionStats() {
+      const map = new Map();
+      for (const log of state.errorLogs) {
+        const qid = log.question.id;
+        if (!map.has(qid)) {
+          map.set(qid, {
+            question: log.question,
+            wrongCount: 0,
+            attempts: []
+          });
+        }
+        const entry = map.get(qid);
+        entry.wrongCount += 1;
+        entry.attempts.push({ groupName: log.groupName, chosenValue: log.chosenValue });
+      }
+      return Array.from(map.values()).sort((a, b) => b.wrongCount - a.wrongCount);
+    }
+
+    function renderSummary() {
+      const sortedGroups = [...state.groups].sort((a, b) => b.damage - a.damage);
+      const mvp = sortedGroups[0];
+      const wrongStats = getWrongQuestionStats();
+      const activeStat = wrongStats.find(s => s.question.id === state.selectedReviewQId) || wrongStats[0] || null;
+
+      return `
+        <div class="max-w-7xl w-full mx-auto flex-1 flex flex-col gap-3 py-1">
+          <div class="bg-slate-900/90 border border-amber-400/40 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-xl">
+            <div>
+              <div class="text-amber-300 text-xs font-bold tracking-wider uppercase">BATTLE COMPLETE · 接力戰績與錯題診斷</div>
+              <h1 class="text-2xl md:text-3xl font-black text-white mt-0.5">
+                ${state.hp <= 0 ? '🎉 括號混沌巨獸已被全班合力擊敗！' : '📊 本回合戰況統計與錯題回顧'}
+              </h1>
+              <p class="text-slate-300 text-sm mt-1">
+                最高輸出：👑 <span class="text-amber-300 font-bold">${mvp.name}（${mvp.team}）</span>，共造成 <span class="text-rose-400 font-bold">${mvp.damage}</span> 點傷害（發動 ${mvp.ultimateCount} 次合體大招）！
+              </p>
+            </div>
+            <button onclick="resetGame()" class="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm cursor-pointer">
+              🔄 再玩一局
+            </button>
+          </div>
+
+          <div class="grid grid-cols-5 gap-2.5">
+            ${sortedGroups.map((g, idx) => `
+              <div class="rounded-xl p-3 border ${idx === 0 ? 'bg-amber-500/15 border-amber-400' : 'bg-slate-900/80 border-slate-700'}">
+                <div class="flex items-center justify-between">
+                  <span class="font-black text-sm text-white">${idx === 0 ? '👑 ' : `#${idx + 1} `}${g.name}</span>
+                  <span class="text-xs px-2 py-0.5 rounded-full ${g.badgeBg} text-white font-bold">${g.team}</span>
+                </div>
+                <div class="text-2xl font-black text-rose-400 mt-1">${g.damage} <span class="text-xs text-slate-400 font-normal">傷害</span></div>
+                <div class="text-xs text-amber-300 font-bold mt-0.5">🔥 合體大招：${g.ultimateCount} 次</div>
+                <div class="text-xs text-slate-300 mt-0.5 flex justify-between">
+                  <span>答對 ${g.correctCount} 題</span>
+                  <span>錯 ${g.wrongCount} 次</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="flex-1 bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-3">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+              <div class="flex gap-2">
+                <button onclick="state.reviewTab='byQuestion'; state.showHintInReview=false; render();"
+                  class="px-3.5 py-1.5 rounded-lg text-sm font-bold cursor-pointer ${state.reviewTab === 'byQuestion' ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">
+                  🔥 依錯題排行（共錯 ${wrongStats.length} 題）
+                </button>
+                <button onclick="state.reviewTab='byGroup'; render();"
+                  class="px-3.5 py-1.5 rounded-lg text-sm font-bold cursor-pointer ${state.reviewTab === 'byGroup' ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">
+                  👥 依組別與棒次紀錄（共 ${state.errorLogs.length} 筆）
+                </button>
+              </div>
+              ${activeStat && state.reviewTab === 'byQuestion' ? `
+                <button onclick="state.showHintInReview = !state.showHintInReview; render();"
+                  class="px-3.5 py-1.5 rounded-lg text-sm font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 cursor-pointer">
+                  ${state.showHintInReview ? '🙈 隱藏巧算提示' : '💡 顯示巧算提示'}
+                </button>
+              ` : ''}
+            </div>
+
+            ${state.errorLogs.length === 0 ? `
+              <div class="flex-1 flex flex-col items-center justify-center text-center py-8">
+                <div class="text-4xl mb-2">🌟</div>
+                <div class="text-xl font-black text-emerald-300">太強了！全班接力零失誤全數過關！</div>
+                <p class="text-slate-400 text-sm mt-1">沒有錯題需要檢討，可以直接調高怪獸血量再戰一回合！</p>
+              </div>
+            ` : state.reviewTab === 'byQuestion' ? `
+              <div class="grid grid-cols-12 gap-3 flex-1">
+                <div class="col-span-5 flex flex-col gap-2 max-h-[340px] overflow-y-auto pr-1">
+                  ${wrongStats.map(item => {
+                    const isSelected = activeStat && activeStat.question.id === item.question.id;
+                    return `
+                      <button onclick="state.selectedReviewQId='${item.question.id}'; state.showHintInReview=false; render();"
+                        class="text-left p-3 rounded-xl border transition cursor-pointer ${isSelected ? 'bg-indigo-500/20 border-indigo-400' : 'bg-slate-800/70 border-slate-700 hover:border-slate-500'}">
+                        <div class="flex items-center justify-between text-xs">
+                          <span class="text-amber-300 font-bold">${'★'.repeat(item.question.stars)} · ${item.question.category}</span>
+                          <span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold">錯 ${item.wrongCount} 次</span>
+                        </div>
+                        <div class="text-sm font-black text-white mt-1">${item.question.text}</div>
+                      </button>
+                    `;
+                  }).join('')}
+                </div>
+                <div class="col-span-7 bg-slate-950/70 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+                  ${activeStat ? `
+                    <div>
+                      <div class="text-xs text-indigo-300 font-bold">放大檢討題目 · ${activeStat.question.category}</div>
+                      <div class="text-xl md:text-2xl font-black text-white mt-1">${activeStat.question.text}</div>
+                      <div class="mt-2 inline-block px-3 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 font-bold text-sm">
+                        正確答案：${activeStat.question.answer}
+                      </div>
+                      <div class="mt-3">
+                        <div class="text-xs text-slate-400 mb-1.5 font-bold">各組當時誤選紀錄：</div>
+                        <div class="flex flex-wrap gap-2">
+                          ${activeStat.attempts.map(a => `
+                            <span class="px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/40 text-rose-200 text-xs font-bold">
+                              ${a.groupName} → 誤選「${a.chosenValue}」
+                            </span>
+                          `).join('')}
+                        </div>
+                      </div>
+                      ${state.showHintInReview ? `
+                        <div class="mt-4 p-3 rounded-xl bg-amber-400/15 border border-amber-400/50 text-amber-200 text-sm font-bold">
+                          💡 巧算思路：${activeStat.question.hint}
+                        </div>
+                      ` : ''}
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            ` : `
+              <div class="grid grid-cols-5 gap-2.5">
+                ${state.groups.map(g => {
+                  const gLogs = state.errorLogs.filter(l => l.groupId === g.id);
+                  return `
+                    <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3 flex flex-col gap-2 max-h-[340px] overflow-y-auto">
+                      <div class="font-black text-sm text-white border-b border-slate-800 pb-1.5">${g.name}（${g.team}）</div>
+                      ${gLogs.length === 0 ? `<div class="text-xs text-emerald-400">本局無答錯紀錄 ✨</div>` : gLogs.map(l => `
+                        <div class="bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs">
+                          <div class="text-amber-300 font-bold mb-0.5">${l.groupName}</div>
+                          <div class="font-bold text-slate-200">${l.question.text}</div>
+                          <div class="text-rose-400 mt-0.5">誤選：${l.chosenValue}</div>
+                          <div class="text-emerald-400">正解：${l.correctAnswer}</div>
+                        </div>
+                      `).join('')}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderBattle() {
+      const hpPct = Math.max(0, Math.min(100, (state.hp / state.maxHp) * 100));
+      const now = Date.now();
+
+      return `
+        <div class="bg-slate-900/90 border border-slate-700/80 rounded-2xl px-4 py-2 relative overflow-hidden shadow-lg">
+          ${state.floatingDamages.map(f => `
+            <div style="left: ${f.leftPct}%; top: 24%;" class="animate-float-dmg absolute z-30 pointer-events-none font-black drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] ${f.isUltimate ? 'text-3xl md:text-4xl text-rose-300' : 'text-2xl md:text-3xl text-amber-300'}">
+              ${f.isUltimate ? '🔥 合體大招 ' : ''}-${f.amount}!
+            </div>
+          `).join('')}
+
+          ${state.ultimateAlert ? `
+            <div class="animate-ultimate absolute inset-x-0 top-1 z-30 flex justify-center pointer-events-none">
+              <div class="px-5 py-1.5 rounded-full bg-gradient-to-r from-rose-600 via-amber-500 to-rose-600 text-white font-black text-sm md:text-base shadow-xl border border-amber-200">
+                ${state.ultimateAlert}
+              </div>
+            </div>
+          ` : ''}
+
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="${state.monsterHit ? 'animate-shake' : 'animate-monster-idle'} w-11 h-11 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-800 border border-purple-300/40 flex items-center justify-center shrink-0 shadow">
+                <svg viewBox="0 0 120 120" class="w-9 h-9">
+                  <rect x="20" y="24" width="80" height="76" rx="22" fill="${state.monsterHit ? '#fb7185' : '#a855f7'}" />
+                  <circle cx="44" cy="54" r="9" fill="#fff" />
+                  <circle cx="76" cy="54" r="9" fill="#fff" />
+                  <circle cx="45" cy="55" r="4" fill="#1e1b4b" />
+                  <circle cx="75" cy="55" r="4" fill="#1e1b4b" />
+                  <path d="M38 78 Q60 66 82 78" stroke="#fef08a" stroke-width="5" fill="none" stroke-linecap="round" />
+                </svg>
+              </div>
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-black text-base md:text-lg text-white">括號混沌巨獸</span>
+                  <span class="text-xs px-2.5 py-0.5 rounded-full bg-rose-500/25 border border-rose-400/50 text-rose-200 font-black">
+                    HP ${state.hp.toLocaleString()} / ${state.maxHp.toLocaleString()}
+                  </span>
+                </div>
+                <div class="text-xs text-amber-200/95 truncate mt-0.5">${state.bannerText}</div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1.5 shrink-0">
+              <select onchange="changeTeamSize(Number(this.value))" aria-label="每組人數"
+                class="bg-slate-800 border border-amber-400/60 text-amber-200 text-xs font-bold rounded-lg px-2 py-1.5 cursor-pointer">
+                <option value="4" ${state.teamSize === 4 ? 'selected' : ''}>每組 4 棒</option>
+                <option value="5" ${state.teamSize === 5 ? 'selected' : ''}>每組 5 棒</option>
+                <option value="6" ${state.teamSize === 6 ? 'selected' : ''}>每組 6 棒</option>
+              </select>
+              <select onchange="resetGame(Number(this.value))" aria-label="怪獸血量"
+                class="bg-slate-800 border border-slate-600 text-slate-200 text-xs font-bold rounded-lg px-2 py-1.5 cursor-pointer">
+                <option value="5000" ${state.maxHp === 5000 ? 'selected' : ''}>血量 5,000</option>
+                <option value="8000" ${state.maxHp === 8000 ? 'selected' : ''}>血量 8,000</option>
+                <option value="12000" ${state.maxHp === 12000 ? 'selected' : ''}>血量 12,000</option>
+                <option value="18000" ${state.maxHp === 18000 ? 'selected' : ''}>血量 18,000</option>
+                <option value="25000" ${state.maxHp === 25000 ? 'selected' : ''}>血量 25,000</option>
+              </select>
+              <button onclick="state.soundEnabled = !state.soundEnabled; render();"
+                class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold cursor-pointer">
+                ${state.soundEnabled ? '🔊' : '🔇'}
+              </button>
+              <button onclick="state.paused = !state.paused; render();"
+                class="px-2.5 py-1.5 rounded-lg ${state.paused ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600'} text-xs font-bold cursor-pointer">
+                ${state.paused ? '▶ 繼續' : '⏸ 暫停'}
+              </button>
+              <button onclick="finishBattleNow()"
+                class="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold cursor-pointer">
+                📊 結算
+              </button>
+              <button onclick="resetGame()"
+                class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold cursor-pointer">
+                ↺
+              </button>
+            </div>
+          </div>
+
+          <div class="w-full h-3 bg-slate-950 rounded-full overflow-hidden border border-slate-700 mt-1.5">
+            <div style="width: ${hpPct}%" class="h-full transition-all duration-300 bg-gradient-to-r from-rose-500 via-amber-400 to-emerald-400"></div>
+          </div>
+        </div>
+
+        <div class="flex-1 grid grid-cols-5 gap-2 min-h-0">
+          ${state.groups.map(g => {
+            const isFrozen = g.freezeUntil > now;
+            const remainSec = Math.max(0, Math.ceil((g.freezeUntil - now) / 1000));
+            const speed = getSpeedMultiplier(g.question.startedAt);
+            const isUltimateReady = g.currentRunner === state.teamSize;
+
+            return `
+              <div class="relative bg-slate-900/90 border-2 ${g.border} rounded-2xl flex flex-col justify-between overflow-hidden shadow-lg">
+                ${isFrozen ? `
+                  <div class="absolute inset-0 z-20 bg-slate-950/88 backdrop-blur-[2px] flex flex-col items-center justify-center p-3 text-center">
+                    <div class="text-3xl mb-1">❄️</div>
+                    <div class="text-sky-300 font-black text-base">第 ${g.currentRunner} 棒冷卻中</div>
+                    <div class="text-2xl font-black text-white mt-0.5">${remainSec} 秒</div>
+                    <div class="text-xs text-slate-300 mt-1">組員快教第 ${g.currentRunner} 棒怎麼算！</div>
+                  </div>
+                ` : ''}
+
+                ${state.paused ? `
+                  <div class="absolute inset-0 z-20 bg-slate-950/75 flex items-center justify-center font-black text-amber-300 text-lg">
+                    ⏸ 遊戲已暫停
+                  </div>
+                ` : ''}
+
+                <div class="bg-gradient-to-r ${g.headerBg} px-2.5 py-1.5 text-white">
+                  <div class="flex items-center justify-between gap-1">
+                    <span class="font-black text-sm md:text-base truncate">${g.name} · ${g.team}</span>
+                    <span class="font-black text-xs md:text-sm bg-black/30 px-2 py-0.5 rounded-lg shrink-0">⚔️ ${g.damage}</span>
+                  </div>
+                  <div class="flex items-center justify-between text-[11px] text-white/90 mt-0.5">
+                    <span>🔥 連擊 ${g.combo} · 大招×${g.ultimateCount}</span>
+                    <span class="font-bold">${speed.label}</span>
+                  </div>
+                  <div class="w-full h-1 bg-black/30 rounded-full overflow-hidden mt-1">
+                    <div style="width: ${speed.pct}%" class="h-full ${speed.barClass} transition-all duration-500"></div>
+                  </div>
+                </div>
+
+                <!-- 接力棒次進度列 -->
+                <div class="px-2 py-1.5 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between gap-1">
+                  <span class="text-xs font-black px-2 py-0.5 rounded-md border ${isUltimateReady ? 'bg-amber-400 text-slate-950 border-amber-200 animate-pulse' : g.batonBg}">
+                    ${isUltimateReady ? `💥 第 ${g.currentRunner} 棒（大招局!）` : `🏃 請派第 ${g.currentRunner} 棒`}
+                  </span>
+                  <div class="flex items-center gap-1">
+                    ${Array.from({ length: state.teamSize }, (_, idx) => {
+                      const num = idx + 1;
+                      const done = num < g.currentRunner;
+                      const active = num === g.currentRunner;
+                      return `<span class="w-4 h-4 rounded-full text-[10px] font-black flex items-center justify-center ${
+                        done ? 'bg-emerald-500 text-slate-950' : active ? 'bg-amber-400 text-slate-950 ring-2 ring-white' : 'bg-slate-800 text-slate-500'
+                      }">${num}</span>`;
+                    }).join('')}
+                  </div>
+                </div>
+
+                <!-- 題目區 -->
+                <div class="px-2.5 pt-2 pb-1.5 bg-slate-950/55 border-b border-slate-800">
+                  <div class="flex items-center justify-between text-[11px] mb-1">
+                    <span class="text-amber-300 font-bold">${'★'.repeat(g.question.stars)} · ${g.question.category}</span>
+                    <span class="text-slate-400">基傷 ${STAR_BASE_DAMAGE[g.question.stars]}</span>
+                  </div>
+                  <div class="text-sm lg:text-[15px] font-black text-white leading-snug break-words">
+                    ${g.question.text}
+                  </div>
+                </div>
+
+                <!-- 四個大按鈕選項 -->
+                <div class="p-2 flex-1 grid grid-cols-1 gap-1.5 content-stretch">
+                  ${g.question.shuffledOptions.map((opt, idx) => {
+                    const letter = ['A', 'B', 'C', 'D'][idx];
+                    const isEliminated = g.eliminatedOptions.includes(opt);
+                    return `
+                      <button onclick="handleAnswer(${g.id}, ${opt})" ${isEliminated || isFrozen || state.paused ? 'disabled' : ''}
+                        class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl border font-black transition cursor-pointer ${
+                          isEliminated
+                            ? 'bg-slate-900/40 border-slate-800 text-slate-600 line-through cursor-not-allowed'
+                            : `bg-slate-800/90 border-slate-600/80 text-white ${g.btnHover} active:scale-[0.98]`
+                        }">
+                        <span class="text-xs px-1.5 py-0.5 rounded bg-slate-950/70 text-slate-300 mr-2">${letter}</span>
+                        <span class="text-base lg:text-lg flex-1 text-center">${opt}</span>
+                      </button>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function render() {
+      const root = document.getElementById('app');
+      root.innerHTML = state.ended ? renderSummary() : renderBattle();
+    }
+
+    setInterval(() => {
+      if (!state.ended && !state.paused) {
+        render();
+      }
+    }, 500);
+
+    render();
+  </script>
+</body>
+</html>
