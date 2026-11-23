@@ -694,84 +694,17 @@
       `;
     }
 
-function updateTimersOnly() {
-      if (state.ended || state.paused) return;
-      const now = Date.now();
-
-      state.groups.forEach(g => {
-        // 1. 更新冷卻倒數秒數（不重建整個遮罩，避免點選或畫面閃爍）
-        const freezeEl = document.getElementById(`freeze-sec-${g.id}`);
-        if (freezeEl) {
-          if (g.freezeUntil > now) {
-            const remainSec = Math.max(0, Math.ceil((g.freezeUntil - now) / 1000));
-            freezeEl.textContent = `${remainSec} 秒`;
-          } else {
-            // 冷卻剛好結束時才重畫一次解除遮罩
-            g.freezeUntil = 0;
-            render();
-          }
-        }
-
-        // 2. 更新速度倍率與進度條
-        const speed = getSpeedMultiplier(g.question.startedAt);
-        const speedLabelEl = document.getElementById(`speed-label-${g.id}`);
-        const speedBarEl = document.getElementById(`speed-bar-${g.id}`);
-        if (speedLabelEl) speedLabelEl.textContent = speed.label;
-        if (speedBarEl) {
-          speedBarEl.style.width = `${speed.pct}%`;
-          speedBarEl.className = `h-full ${speed.barClass} transition-all duration-500`;
-        }
-      });
-    }
-
     function render() {
       const root = document.getElementById('app');
       root.innerHTML = state.ended ? renderSummary() : renderBattle();
     }
 
-    // 浮動傷害與大招提示改為只更新提示區塊，不整頁重畫
-    const _origSpawnFloatingDamage = spawnFloatingDamage;
-    spawnFloatingDamage = function(groupId, amount, isUltimate = false) {
-      const id = Date.now() + Math.random();
-      const leftPct = 10 + (groupId - 1) * 20;
-      state.floatingDamages.push({ id, amount, leftPct, isUltimate });
-      renderOverlaysOnly();
-      setTimeout(() => {
-        state.floatingDamages = state.floatingDamages.filter(f => f.id !== id);
-        renderOverlaysOnly();
-      }, 1050);
-    };
+    setInterval(() => {
+      if (!state.ended && !state.paused) {
+        render();
+      }
+    }, 500);
 
-    const _origTriggerUltimateBanner = triggerUltimateBanner;
-    triggerUltimateBanner = function(groupName, teamName) {
-      state.ultimateAlert = `🔥 ${groupName}（${teamName}）6 棒接力完成！發動合體大招 -${ULTIMATE_BONUS_DAMAGE}！`;
-      renderOverlaysOnly();
-      setTimeout(() => {
-        state.ultimateAlert = null;
-        renderOverlaysOnly();
-      }, 1800);
-    };
-
-    function renderOverlaysOnly() {
-      const layer = document.getElementById('fx-overlay-layer');
-      if (!layer) return;
-      layer.innerHTML = `
-        ${state.floatingDamages.map(f => `
-          <div style="left: ${f.leftPct}%; top: 24%;" class="animate-float-dmg absolute z-30 pointer-events-none font-black drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] ${f.isUltimate ? 'text-3xl md:text-4xl text-rose-300' : 'text-2xl md:text-3xl text-amber-300'}">
-            ${f.isUltimate ? '🔥 合體大招 ' : ''}-${f.amount}!
-          </div>
-        `).join('')}
-        ${state.ultimateAlert ? `
-          <div class="animate-ultimate absolute inset-x-0 top-1 z-30 flex justify-center pointer-events-none">
-            <div class="px-5 py-1.5 rounded-full bg-gradient-to-r from-rose-600 via-amber-500 to-rose-600 text-white font-black text-sm md:text-base shadow-xl border border-amber-200">
-              ${state.ultimateAlert}
-            </div>
-          </div>
-        ` : ''}
-      `;
-    }
-
-    setInterval(updateTimersOnly, 500);
     render();
   </script>
 </body>
