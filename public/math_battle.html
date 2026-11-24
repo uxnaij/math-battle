@@ -289,7 +289,7 @@ function pickQuestion(excludeIds = [], mode = 'mixed') {
       });
     }
 
-    let state = {
+let state = {
       mode: 'mixed',
       maxHp: 10000,
       hp: 10000,
@@ -305,8 +305,9 @@ function pickQuestion(excludeIds = [], mode = 'mixed') {
       reviewTab: 'byQuestion',
       selectedReviewQId: null,
       showHintInReview: false,
-      groups: initGroups('mixed')
+      groups: []
     };
+    state.groups = initGroups('mixed');
 
     function getSpeedMultiplier(startedAt) {
       const elapsedSec = (Date.now() - startedAt) / 1000;
@@ -359,6 +360,9 @@ function pickQuestion(excludeIds = [], mode = 'mixed') {
         g.damage += actualDmg;
         g.combo += 1;
         g.correctCount += 1;
+        if (!state.usedQuestionIds.includes(g.question.id)) {
+          state.usedQuestionIds.push(g.question.id);
+        }
         g.eliminatedOptions = [];
         state.hp = Math.max(0, state.hp - actualDmg);
         state.monsterHit = true;
@@ -366,9 +370,7 @@ function pickQuestion(excludeIds = [], mode = 'mixed') {
         if (completedFullLap) {
           g.currentRunner = 1;
           g.ultimateCount += 1;
-          if (!state.usedQuestionIds.includes(g.question.id)) {
-          state.usedQuestionIds.push(g.question.id);
-        }
+          
           state.bannerText = `💥 ${g.name}第 6 棒壓軸命中！全員輪完一輪，發動合體大招暴擊 ${actualDmg} 傷！請換第 1 棒準備！`;
           playTone('ultimate');
           spawnFloatingDamage(g.id, actualDmg, true);
