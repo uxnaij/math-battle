@@ -245,9 +245,21 @@
       } catch (e) {}
     }
 
-    function pickQuestion(excludeIds = [], mode = 'mixed') {
+function pickQuestion(excludeIds = [], mode = 'mixed') {
       const modePool = getPoolByMode(mode);
-      const pool = modePool.filter(q => !excludeIds.includes(q.id));
+      const activeGroupIds = state.groups ? state.groups.map(item => item.question.id) : [];
+      const blockedIds = new Set([...excludeIds, ...activeGroupIds, ...(state.usedQuestionIds || [])]);
+
+      let pool = modePool.filter(q => !blockedIds.has(q.id));
+
+      // 若該模式題庫已全部答完一輪，保留目前畫面上的 5 題不重複，其餘重新開放輪抽
+      if (pool.length === 0) {
+        const modeIdSet = new Set(modePool.map(q => q.id));
+        state.usedQuestionIds = (state.usedQuestionIds || []).filter(id => !modeIdSet.has(id));
+        const fallbackBlocked = new Set([...excludeIds, ...activeGroupIds]);
+        pool = modePool.filter(q => !fallbackBlocked.has(q.id));
+      }
+
       const source = pool.length > 0 ? pool : modePool;
       const wordPool = source.filter(q => q.isWordProblem);
       const numPool = source.filter(q => !q.isWordProblem);
@@ -284,6 +296,7 @@
       paused: false,
       ended: false,
       soundEnabled: true,
+      usedQuestionIds: [],
       bannerText: '【混合模式】固定 6 棒接力制！輪完第 6 棒發動「合體大招 +1000 傷」！',
       monsterHit: false,
       floatingDamages: [],
@@ -353,6 +366,9 @@
         if (completedFullLap) {
           g.currentRunner = 1;
           g.ultimateCount += 1;
+          if (!state.usedQuestionIds.includes(g.question.id)) {
+          state.usedQuestionIds.push(g.question.id);
+        }
           state.bannerText = `💥 ${g.name}第 6 棒壓軸命中！全員輪完一輪，發動合體大招暴擊 ${actualDmg} 傷！請換第 1 棒準備！`;
           playTone('ultimate');
           spawnFloatingDamage(g.id, actualDmg, true);
@@ -428,6 +444,7 @@
         paused: false,
         ended: false,
         soundEnabled: state.soundEnabled,
+        usedQuestionIds: [],
         bannerText: `【${MODE_LABELS[newMode]}】新回合開始（總血量 ${newMaxHp.toLocaleString()}）！請派【第 1 棒】出戰！`,
         monsterHit: false,
         floatingDamages: [],
