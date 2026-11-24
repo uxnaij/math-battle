@@ -158,7 +158,7 @@
       { id: 'q096', stars: 3, tier: '魔王', isWordProblem: true, category: '分層裝箱', text: '有 5400 顆巧克力，每 25 顆裝 1 袋，每 27 袋裝 1 箱，共可裝幾箱？', options: [8, 200, 216, 4], answer: 8, hint: '先算 5400 ÷ 27 = 200 袋，再算 200 ÷ 25 = 8 箱' },
       { id: 'q097', stars: 3, tier: '魔王', isWordProblem: false, category: '加減湊整', text: '335 − 164 + 165 − 136 = ?', options: [200, 500, 300, 100], answer: 200, hint: '(335 + 165) − (164 + 136) = 500 − 300 = 200' },
       { id: 'q098', stars: 3, tier: '魔王', isWordProblem: false, category: '加減湊整', text: '418 − 152 + 182 − 148 = ?', options: [300, 600, 200, 310], answer: 300, hint: '(418 + 182) − (152 + 148) = 600 − 300 = 300' },
-     { id: 'q099', stars: 3, tier: '魔王', isWordProblem: false, category: '括號混合', text: '95 + (65 − 35) × 4 = ?', options: [215, 500, 185, 225], answer: 215, hint: '先算括號 65 − 35 = 30，再依「先乘除、後加減」算 30 × 4 = 120，最後 95 + 120 = 215' },
+      { id: 'q099', stars: 3, tier: '魔王', isWordProblem: false, category: '括號混合', text: '95 + (65 − 35) × 4 = ?', options: [215, 500, 185, 225], answer: 215, hint: '先算括號 65 − 35 = 30，再依「先乘除、後加減」算 30 × 4 = 120，最後 95 + 120 = 215' },
       { id: 'q100', stars: 3, tier: '魔王', isWordProblem: true, category: '促銷優惠', text: '飲料店買相同飲料 2 杯便宜 8 元，綠茶 30 元、烏龍茶 26 元，買 1 杯綠茶和 2 杯烏龍茶共付幾元？', options: [74, 82, 78, 66], answer: 74, hint: '30 + 26 × 2 − 8 = 30 + 52 − 8 = 74 元' },
       { id: 'q101', stars: 3, tier: '魔王', isWordProblem: true, category: '促銷優惠', text: '麵包店同款麵包買 2 個折 10 元，菠蘿 38 元、紅豆 32 元，買 2 個菠蘿和 1 個紅豆共付幾元？', options: [98, 108, 92, 88], answer: 98, hint: '38 × 2 + 32 − 10 = 76 + 32 − 10 = 98 元' },
       { id: 'q102', stars: 3, tier: '魔王', isWordProblem: true, category: '庫存剩餘', text: '倉庫有 65 箱飲料，每箱 24 瓶，1 位搬運工搬走 45 瓶，12 位搬運工搬完後還剩幾瓶？', options: [1020, 1560, 540, 1120], answer: 1020, hint: '24 × 65 − 45 × 12 = 1560 − 540 = 1020 瓶' },
@@ -245,15 +245,15 @@
       } catch (e) {}
     }
 
-function pickQuestion(excludeIds = [], mode = 'mixed') {
+    function pickQuestion(excludeIds = [], mode = 'mixed') {
       const modePool = getPoolByMode(mode);
-      const activeGroupIds = state.groups ? state.groups.map(item => item.question.id) : [];
-      const blockedIds = new Set([...excludeIds, ...activeGroupIds, ...(state.usedQuestionIds || [])]);
+      const activeGroupIds = (typeof state !== 'undefined' && state.groups) ? state.groups.map(item => item.question.id) : [];
+      const usedIds = (typeof state !== 'undefined' && state.usedQuestionIds) ? state.usedQuestionIds : [];
+      const blockedIds = new Set([...excludeIds, ...activeGroupIds, ...usedIds]);
 
       let pool = modePool.filter(q => !blockedIds.has(q.id));
 
-      // 若該模式題庫已全部答完一輪，保留目前畫面上的 5 題不重複，其餘重新開放輪抽
-      if (pool.length === 0) {
+      if (pool.length === 0 && typeof state !== 'undefined') {
         const modeIdSet = new Set(modePool.map(q => q.id));
         state.usedQuestionIds = (state.usedQuestionIds || []).filter(id => !modeIdSet.has(id));
         const fallbackBlocked = new Set([...excludeIds, ...activeGroupIds]);
@@ -289,7 +289,7 @@ function pickQuestion(excludeIds = [], mode = 'mixed') {
       });
     }
 
-let state = {
+    let state = {
       mode: 'mixed',
       maxHp: 10000,
       hp: 10000,
@@ -370,7 +370,6 @@ let state = {
         if (completedFullLap) {
           g.currentRunner = 1;
           g.ultimateCount += 1;
-          
           state.bannerText = `💥 ${g.name}第 6 棒壓軸命中！全員輪完一輪，發動合體大招暴擊 ${actualDmg} 傷！請換第 1 棒準備！`;
           playTone('ultimate');
           spawnFloatingDamage(g.id, actualDmg, true);
@@ -417,7 +416,7 @@ let state = {
       }
     }
 
-  let pausedAt = null;
+    let pausedAt = null;
 
     function setPausedState(nextPaused) {
       if (nextPaused && !state.paused) {
@@ -439,6 +438,7 @@ let state = {
     }
 
     function resetGame(newMaxHp = state.maxHp, newMode = state.mode) {
+      pausedAt = null;
       state = {
         mode: newMode,
         maxHp: newMaxHp,
@@ -455,8 +455,9 @@ let state = {
         reviewTab: 'byQuestion',
         selectedReviewQId: null,
         showHintInReview: false,
-        groups: initGroups(newMode)
+        groups: []
       };
+      state.groups = initGroups(newMode);
       render();
     }
 
@@ -588,7 +589,7 @@ let state = {
                       </div>
                       ${state.showHintInReview ? `
                         <div class="mt-4 p-3 rounded-xl bg-amber-400/15 border border-amber-400/50 text-amber-200 text-sm md:text-base font-bold">
-                          💡 巧算思路：${activeStat.question.hint}
+                          💡 ${activeStat.question.stars === 1 ? '解題步驟' : '解題／巧算思路'}：${activeStat.question.hint}
                         </div>
                       ` : ''}
                     </div>
@@ -804,7 +805,7 @@ let state = {
       `;
     }
 
-function render() {
+    function render() {
       const root = document.getElementById('app');
       root.innerHTML = state.ended ? renderSummary() : renderBattle();
     }
