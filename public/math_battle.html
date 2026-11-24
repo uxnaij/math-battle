@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>五組接力打怪獸｜五年級多步驟計算</title>
+  <title>五組六棒接力打怪獸｜五年級多步驟計算</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -40,6 +40,8 @@
   <div id="app" class="min-h-screen flex flex-col justify-between p-2.5 gap-2 bg-gradient-to-b from-slate-950 via-slate-900 to-indigo-950"></div>
 
   <script>
+    const TEAM_SIZE = 6;
+
     const QUESTION_BANK = [
       // ★1 基礎型（120 傷）
       { id: 'n1', stars: 1, category: '連加湊整', text: '135 + 165 + 240 = ?', options: [540, 530, 550, 440], answer: 540, hint: '先算 135 + 165 = 300，再算 300 + 240 = 540' },
@@ -212,11 +214,10 @@
     let state = {
       maxHp: 8000,
       hp: 8000,
-      teamSize: 6,
       paused: false,
       ended: false,
       soundEnabled: true,
-      bannerText: '接力規則：每答對 1 題換下一棒上台按！全組輪完一輪發動「合體大招 +1000 傷」！',
+      bannerText: '固定 6 棒接力制！每答對 1 題換下一棒上台按，輪完第 6 棒發動「合體大招 +1000 傷」！',
       monsterHit: false,
       floatingDamages: [],
       ultimateAlert: null,
@@ -246,7 +247,7 @@
     }
 
     function triggerUltimateBanner(groupName, teamName) {
-      state.ultimateAlert = `🔥 ${groupName}（${teamName}）全員接力完成！發動合體大招 -${ULTIMATE_BONUS_DAMAGE}！`;
+      state.ultimateAlert = `🔥 ${groupName}（${teamName}）6 棒接力完成！發動合體大招 -${ULTIMATE_BONUS_DAMAGE}！`;
       render();
       setTimeout(() => {
         state.ultimateAlert = null;
@@ -270,7 +271,7 @@
         const comboBonus = 1 + Math.min(g.combo, 5) * 0.05;
         const baseHit = Math.round(STAR_BASE_DAMAGE[g.question.stars] * mult * comboBonus);
 
-        const completedFullLap = runnerNo >= state.teamSize;
+        const completedFullLap = runnerNo >= TEAM_SIZE;
         const bonusDmg = completedFullLap ? ULTIMATE_BONUS_DAMAGE : 0;
         const totalAttemptDmg = baseHit + bonusDmg;
         const actualDmg = Math.min(state.hp, totalAttemptDmg);
@@ -285,7 +286,7 @@
         if (completedFullLap) {
           g.currentRunner = 1;
           g.ultimateCount += 1;
-          state.bannerText = `💥 ${g.name}第 ${runnerNo} 棒壓軸命中！全員輪完一輪，發動合體大招暴擊 ${actualDmg} 傷！請換第 1 棒準備！`;
+          state.bannerText = `💥 ${g.name}第 6 棒壓軸命中！全員輪完一輪，發動合體大招暴擊 ${actualDmg} 傷！請換第 1 棒準備！`;
           playTone('ultimate');
           spawnFloatingDamage(g.id, actualDmg, true);
           triggerUltimateBanner(g.name, g.team);
@@ -331,24 +332,14 @@
       }
     }
 
-    function changeTeamSize(newSize) {
-      state.teamSize = newSize;
-      state.groups.forEach(g => {
-        if (g.currentRunner > newSize) g.currentRunner = 1;
-      });
-      state.bannerText = `已調整為每組 ${newSize} 人接力制！輪完 ${newSize} 棒即發動合體大招！`;
-      render();
-    }
-
     function resetGame(newMaxHp = state.maxHp) {
       state = {
         maxHp: newMaxHp,
         hp: newMaxHp,
-        teamSize: state.teamSize,
         paused: false,
         ended: false,
         soundEnabled: state.soundEnabled,
-        bannerText: `新回合開始（總血量 ${newMaxHp}）！每組請派【第 1 棒】先出戰！`,
+        bannerText: `新回合開始（總血量 ${newMaxHp}）！每組請派【第 1 棒】先出戰（共 6 棒接力）！`,
         monsterHit: false,
         floatingDamages: [],
         ultimateAlert: null,
@@ -396,15 +387,15 @@
         <div class="max-w-7xl w-full mx-auto flex-1 flex flex-col gap-3 py-1">
           <div class="bg-slate-900/90 border border-amber-400/40 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-xl">
             <div>
-              <div class="text-amber-300 text-xs font-bold tracking-wider uppercase">BATTLE COMPLETE · 接力戰績與錯題診斷</div>
+              <div class="text-amber-300 text-xs font-bold tracking-wider uppercase">BATTLE COMPLETE · 6 棒接力戰績與錯題診斷</div>
               <h1 class="text-2xl md:text-3xl font-black text-white mt-0.5">
                 ${state.hp <= 0 ? '🎉 括號混沌巨獸已被全班合力擊敗！' : '📊 本回合戰況統計與錯題回顧'}
               </h1>
-              <p class="text-slate-300 text-sm mt-1">
+              <p class="text-slate-300 text-sm md:text-base mt-1">
                 最高輸出：👑 <span class="text-amber-300 font-bold">${mvp.name}（${mvp.team}）</span>，共造成 <span class="text-rose-400 font-bold">${mvp.damage}</span> 點傷害（發動 ${mvp.ultimateCount} 次合體大招）！
               </p>
             </div>
-            <button onclick="resetGame()" class="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm cursor-pointer">
+            <button onclick="resetGame()" class="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm md:text-base cursor-pointer">
               🔄 再玩一局
             </button>
           </div>
@@ -413,11 +404,11 @@
             ${sortedGroups.map((g, idx) => `
               <div class="rounded-xl p-3 border ${idx === 0 ? 'bg-amber-500/15 border-amber-400' : 'bg-slate-900/80 border-slate-700'}">
                 <div class="flex items-center justify-between">
-                  <span class="font-black text-sm text-white">${idx === 0 ? '👑 ' : `#${idx + 1} `}${g.name}</span>
+                  <span class="font-black text-sm md:text-base text-white">${idx === 0 ? '👑 ' : `#${idx + 1} `}${g.name}</span>
                   <span class="text-xs px-2 py-0.5 rounded-full ${g.badgeBg} text-white font-bold">${g.team}</span>
                 </div>
                 <div class="text-2xl font-black text-rose-400 mt-1">${g.damage} <span class="text-xs text-slate-400 font-normal">傷害</span></div>
-                <div class="text-xs text-amber-300 font-bold mt-0.5">🔥 合體大招：${g.ultimateCount} 次</div>
+                <div class="text-xs md:text-sm text-amber-300 font-bold mt-0.5">🔥 合體大招：${g.ultimateCount} 次</div>
                 <div class="text-xs text-slate-300 mt-0.5 flex justify-between">
                   <span>答對 ${g.correctCount} 題</span>
                   <span>錯 ${g.wrongCount} 次</span>
@@ -449,7 +440,7 @@
             ${state.errorLogs.length === 0 ? `
               <div class="flex-1 flex flex-col items-center justify-center text-center py-8">
                 <div class="text-4xl mb-2">🌟</div>
-                <div class="text-xl font-black text-emerald-300">太強了！全班接力零失誤全數過關！</div>
+                <div class="text-xl font-black text-emerald-300">太強了！6 棒接力零失誤全數過關！</div>
                 <p class="text-slate-400 text-sm mt-1">沒有錯題需要檢討，可以直接調高怪獸血量再戰一回合！</p>
               </div>
             ` : state.reviewTab === 'byQuestion' ? `
@@ -464,7 +455,7 @@
                           <span class="text-amber-300 font-bold">${'★'.repeat(item.question.stars)} · ${item.question.category}</span>
                           <span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold">錯 ${item.wrongCount} 次</span>
                         </div>
-                        <div class="text-sm font-black text-white mt-1">${item.question.text}</div>
+                        <div class="text-base font-black text-white mt-1">${item.question.text}</div>
                       </button>
                     `;
                   }).join('')}
@@ -473,8 +464,8 @@
                   ${activeStat ? `
                     <div>
                       <div class="text-xs text-indigo-300 font-bold">放大檢討題目 · ${activeStat.question.category}</div>
-                      <div class="text-xl md:text-2xl font-black text-white mt-1">${activeStat.question.text}</div>
-                      <div class="mt-2 inline-block px-3 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 font-bold text-sm">
+                      <div class="text-2xl font-black text-white mt-1">${activeStat.question.text}</div>
+                      <div class="mt-2 inline-block px-3 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 font-bold text-base">
                         正確答案：${activeStat.question.answer}
                       </div>
                       <div class="mt-3">
@@ -488,7 +479,7 @@
                         </div>
                       </div>
                       ${state.showHintInReview ? `
-                        <div class="mt-4 p-3 rounded-xl bg-amber-400/15 border border-amber-400/50 text-amber-200 text-sm font-bold">
+                        <div class="mt-4 p-3 rounded-xl bg-amber-400/15 border border-amber-400/50 text-amber-200 text-sm md:text-base font-bold">
                           💡 巧算思路：${activeStat.question.hint}
                         </div>
                       ` : ''}
@@ -502,11 +493,11 @@
                   const gLogs = state.errorLogs.filter(l => l.groupId === g.id);
                   return `
                     <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3 flex flex-col gap-2 max-h-[340px] overflow-y-auto">
-                      <div class="font-black text-sm text-white border-b border-slate-800 pb-1.5">${g.name}（${g.team}）</div>
+                      <div class="font-black text-sm md:text-base text-white border-b border-slate-800 pb-1.5">${g.name}（${g.team}）</div>
                       ${gLogs.length === 0 ? `<div class="text-xs text-emerald-400">本局無答錯紀錄 ✨</div>` : gLogs.map(l => `
                         <div class="bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs">
                           <div class="text-amber-300 font-bold mb-0.5">${l.groupName}</div>
-                          <div class="font-bold text-slate-200">${l.question.text}</div>
+                          <div class="font-bold text-slate-200 text-sm">${l.question.text}</div>
                           <div class="text-rose-400 mt-0.5">誤選：${l.chosenValue}</div>
                           <div class="text-emerald-400">正解：${l.correctAnswer}</div>
                         </div>
@@ -535,7 +526,7 @@
 
           ${state.ultimateAlert ? `
             <div class="animate-ultimate absolute inset-x-0 top-1 z-30 flex justify-center pointer-events-none">
-              <div class="px-5 py-1.5 rounded-full bg-gradient-to-r from-rose-600 via-amber-500 to-rose-600 text-white font-black text-sm md:text-base shadow-xl border border-amber-200">
+              <div class="px-5 py-1.5 rounded-full bg-gradient-to-r from-rose-600 via-amber-500 to-rose-600 text-white font-black text-base md:text-lg shadow-xl border border-amber-200">
                 ${state.ultimateAlert}
               </div>
             </div>
@@ -555,24 +546,18 @@
               </div>
               <div class="min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <span class="font-black text-base md:text-lg text-white">括號混沌巨獸</span>
-                  <span class="text-xs px-2.5 py-0.5 rounded-full bg-rose-500/25 border border-rose-400/50 text-rose-200 font-black">
+                  <span class="font-black text-lg md:text-xl text-white">括號混沌巨獸</span>
+                  <span class="text-xs md:text-sm px-2.5 py-0.5 rounded-full bg-rose-500/25 border border-rose-400/50 text-rose-200 font-black">
                     HP ${state.hp.toLocaleString()} / ${state.maxHp.toLocaleString()}
                   </span>
                 </div>
-                <div class="text-xs text-amber-200/95 truncate mt-0.5">${state.bannerText}</div>
+                <div class="text-xs md:text-sm text-amber-200/95 truncate mt-0.5">${state.bannerText}</div>
               </div>
             </div>
 
             <div class="flex items-center gap-1.5 shrink-0">
-              <select onchange="changeTeamSize(Number(this.value))" aria-label="每組人數"
-                class="bg-slate-800 border border-amber-400/60 text-amber-200 text-xs font-bold rounded-lg px-2 py-1.5 cursor-pointer">
-                <option value="4" ${state.teamSize === 4 ? 'selected' : ''}>每組 4 棒</option>
-                <option value="5" ${state.teamSize === 5 ? 'selected' : ''}>每組 5 棒</option>
-                <option value="6" ${state.teamSize === 6 ? 'selected' : ''}>每組 6 棒</option>
-              </select>
               <select onchange="resetGame(Number(this.value))" aria-label="怪獸血量"
-                class="bg-slate-800 border border-slate-600 text-slate-200 text-xs font-bold rounded-lg px-2 py-1.5 cursor-pointer">
+                class="bg-slate-800 border border-slate-600 text-slate-200 text-xs md:text-sm font-bold rounded-lg px-2 py-1.5 cursor-pointer">
                 <option value="5000" ${state.maxHp === 5000 ? 'selected' : ''}>血量 5,000</option>
                 <option value="8000" ${state.maxHp === 8000 ? 'selected' : ''}>血量 8,000</option>
                 <option value="12000" ${state.maxHp === 12000 ? 'selected' : ''}>血量 12,000</option>
@@ -580,19 +565,19 @@
                 <option value="25000" ${state.maxHp === 25000 ? 'selected' : ''}>血量 25,000</option>
               </select>
               <button onclick="state.soundEnabled = !state.soundEnabled; render();"
-                class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold cursor-pointer">
+                class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs md:text-sm font-bold cursor-pointer">
                 ${state.soundEnabled ? '🔊' : '🔇'}
               </button>
               <button onclick="state.paused = !state.paused; render();"
-                class="px-2.5 py-1.5 rounded-lg ${state.paused ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600'} text-xs font-bold cursor-pointer">
+                class="px-2.5 py-1.5 rounded-lg ${state.paused ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600'} text-xs md:text-sm font-bold cursor-pointer">
                 ${state.paused ? '▶ 繼續' : '⏸ 暫停'}
               </button>
               <button onclick="finishBattleNow()"
-                class="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold cursor-pointer">
+                class="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs md:text-sm font-bold cursor-pointer">
                 📊 結算
               </button>
               <button onclick="resetGame()"
-                class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold cursor-pointer">
+                class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs md:text-sm font-bold cursor-pointer">
                 ↺
               </button>
             </div>
@@ -608,63 +593,63 @@
             const isFrozen = g.freezeUntil > now;
             const remainSec = Math.max(0, Math.ceil((g.freezeUntil - now) / 1000));
             const speed = getSpeedMultiplier(g.question.startedAt);
-            const isUltimateReady = g.currentRunner === state.teamSize;
+            const isUltimateReady = g.currentRunner === TEAM_SIZE;
 
             return `
               <div class="relative bg-slate-900/90 border-2 ${g.border} rounded-2xl flex flex-col justify-between overflow-hidden shadow-lg">
                 ${isFrozen ? `
                   <div class="absolute inset-0 z-20 bg-slate-950/88 backdrop-blur-[2px] flex flex-col items-center justify-center p-3 text-center">
                     <div class="text-3xl mb-1">❄️</div>
-                    <div class="text-sky-300 font-black text-base">第 ${g.currentRunner} 棒冷卻中</div>
-                    <div class="text-2xl font-black text-white mt-0.5">${remainSec} 秒</div>
-                    <div class="text-xs text-slate-300 mt-1">組員快教第 ${g.currentRunner} 棒怎麼算！</div>
+                    <div class="text-sky-300 font-black text-lg">第 ${g.currentRunner} 棒冷卻中</div>
+                    <div class="text-3xl font-black text-white mt-0.5">${remainSec} 秒</div>
+                    <div class="text-xs md:text-sm text-slate-300 mt-1">組員快教第 ${g.currentRunner} 棒怎麼算！</div>
                   </div>
                 ` : ''}
 
                 ${state.paused ? `
-                  <div class="absolute inset-0 z-20 bg-slate-950/75 flex items-center justify-center font-black text-amber-300 text-lg">
+                  <div class="absolute inset-0 z-20 bg-slate-950/75 flex items-center justify-center font-black text-amber-300 text-xl">
                     ⏸ 遊戲已暫停
                   </div>
                 ` : ''}
 
                 <div class="bg-gradient-to-r ${g.headerBg} px-2.5 py-1.5 text-white">
                   <div class="flex items-center justify-between gap-1">
-                    <span class="font-black text-sm md:text-base truncate">${g.name} · ${g.team}</span>
-                    <span class="font-black text-xs md:text-sm bg-black/30 px-2 py-0.5 rounded-lg shrink-0">⚔️ ${g.damage}</span>
+                    <span class="font-black text-base lg:text-lg truncate">${g.name} · ${g.team}</span>
+                    <span class="font-black text-xs lg:text-sm bg-black/30 px-2 py-0.5 rounded-lg shrink-0">⚔️ ${g.damage}</span>
                   </div>
-                  <div class="flex items-center justify-between text-[11px] text-white/90 mt-0.5">
+                  <div class="flex items-center justify-between text-xs text-white/95 mt-0.5">
                     <span>🔥 連擊 ${g.combo} · 大招×${g.ultimateCount}</span>
                     <span class="font-bold">${speed.label}</span>
                   </div>
-                  <div class="w-full h-1 bg-black/30 rounded-full overflow-hidden mt-1">
+                  <div class="w-full h-1.5 bg-black/30 rounded-full overflow-hidden mt-1">
                     <div style="width: ${speed.pct}%" class="h-full ${speed.barClass} transition-all duration-500"></div>
                   </div>
                 </div>
 
-                <!-- 接力棒次進度列 -->
+                <!-- 固定 6 棒接力進度列 -->
                 <div class="px-2 py-1.5 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between gap-1">
-                  <span class="text-xs font-black px-2 py-0.5 rounded-md border ${isUltimateReady ? 'bg-amber-400 text-slate-950 border-amber-200 animate-pulse' : g.batonBg}">
-                    ${isUltimateReady ? `💥 第 ${g.currentRunner} 棒（大招局!）` : `🏃 請派第 ${g.currentRunner} 棒`}
+                  <span class="text-xs lg:text-sm font-black px-2 py-0.5 rounded-md border ${isUltimateReady ? 'bg-amber-400 text-slate-950 border-amber-200 animate-pulse' : g.batonBg}">
+                    ${isUltimateReady ? '💥 第 6 棒（大招!）' : `🏃 第 ${g.currentRunner}/6 棒`}
                   </span>
                   <div class="flex items-center gap-1">
-                    ${Array.from({ length: state.teamSize }, (_, idx) => {
+                    ${Array.from({ length: TEAM_SIZE }, (_, idx) => {
                       const num = idx + 1;
                       const done = num < g.currentRunner;
                       const active = num === g.currentRunner;
                       return `<span class="w-4 h-4 rounded-full text-[10px] font-black flex items-center justify-center ${
-                        done ? 'bg-emerald-500 text-slate-950' : active ? 'bg-amber-400 text-slate-950 ring-2 ring-white' : 'bg-slate-800 text-slate-500'
+                        done ? 'bg-emerald-500 text-slate-950' : active ? 'bg-amber-400 text-slate-950 ring-1 ring-white' : 'bg-slate-800 text-slate-500'
                       }">${num}</span>`;
                     }).join('')}
                   </div>
                 </div>
 
                 <!-- 題目區 -->
-                <div class="px-2.5 pt-2 pb-1.5 bg-slate-950/55 border-b border-slate-800">
-                  <div class="flex items-center justify-between text-[11px] mb-1">
+                <div class="px-2.5 pt-2 pb-2 bg-slate-950/55 border-b border-slate-800">
+                  <div class="flex items-center justify-between text-xs mb-1">
                     <span class="text-amber-300 font-bold">${'★'.repeat(g.question.stars)} · ${g.question.category}</span>
                     <span class="text-slate-400">基傷 ${STAR_BASE_DAMAGE[g.question.stars]}</span>
                   </div>
-                  <div class="text-sm lg:text-[15px] font-black text-white leading-snug break-words">
+                  <div class="text-base lg:text-lg xl:text-xl font-black text-white leading-snug break-words">
                     ${g.question.text}
                   </div>
                 </div>
@@ -681,8 +666,8 @@
                             ? 'bg-slate-900/40 border-slate-800 text-slate-600 line-through cursor-not-allowed'
                             : `bg-slate-800/90 border-slate-600/80 text-white ${g.btnHover} active:scale-[0.98]`
                         }">
-                        <span class="text-xs px-1.5 py-0.5 rounded bg-slate-950/70 text-slate-300 mr-2">${letter}</span>
-                        <span class="text-base lg:text-lg flex-1 text-center">${opt}</span>
+                        <span class="text-xs lg:text-sm px-1.5 py-0.5 rounded bg-slate-950/70 text-slate-300 mr-2">${letter}</span>
+                        <span class="text-lg lg:text-xl xl:text-2xl flex-1 text-center">${opt}</span>
                       </button>
                     `;
                   }).join('')}
