@@ -611,10 +611,18 @@
   <option value="mixed" ${state.mode === 'mixed' ? 'selected' : ''}>混合模式</option>
   <option value="division" ${state.mode === 'division' ? 'selected' : ''}>連除專攻模式</option>
   <option value="multistep" ${state.mode === 'multistep' ? 'selected' : ''}>多步驟計算模式</option>
+        <select
+          onclick="setPausedState(true);"
+          onblur="setPausedState(false); render();"
+          onchange="setPausedState(false); resetGame(state.maxHp, this.value);"
+          aria-label="出題模式"
+          class="bg-indigo-950 border border-indigo-500/70 text-indigo-100 text-xs md:text-sm font-bold rounded-lg px-2 py-1.5 cursor-pointer">
+          <option value="mixed" ${state.mode === 'mixed' ? 'selected' : ''}>混合模式</option>
+          <option value="division" ${state.mode === 'division' ? 'selected' : ''}>連除專攻模式</option>
+          <option value="multistep" ${state.mode === 'multistep' ? 'selected' : ''}>多步驟計算模式</option>
         </select>
         <select
-          onpointerdown="setPausedState(true);"
-          onfocus="setPausedState(true);"
+          onclick="setPausedState(true);"
           onblur="setPausedState(false); render();"
           onchange="setPausedState(false); resetGame(Number(this.value), state.mode);"
           aria-label="怪獸血量"
