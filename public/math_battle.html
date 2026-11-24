@@ -710,8 +710,9 @@
     }
 
     function render() {
-      const root = document.getElementById('app');
-      root.innerHTML = state.ended ? renderSummary() : renderBattle();
+      if (state.isInteracting) return;
+        const root = document.getElementById('app');
+        root.innerHTML = state.ended ? renderSummary() : renderBattle();
     }
 
     setInterval(() => {
