@@ -352,6 +352,27 @@
       }
     }
 
+  let pausedAt = null;
+
+    function setPausedState(nextPaused) {
+      if (nextPaused && !state.paused) {
+        pausedAt = Date.now();
+        state.paused = true;
+      } else if (!nextPaused && state.paused) {
+        if (pausedAt) {
+          const pausedDuration = Date.now() - pausedAt;
+          state.groups.forEach(g => {
+            g.question.startedAt += pausedDuration;
+            if (g.freezeUntil > 0) {
+              g.freezeUntil += pausedDuration;
+            }
+          });
+          pausedAt = null;
+        }
+        state.paused = false;
+      }
+    }
+
     function resetGame(newMaxHp = state.maxHp, newMode = state.mode) {
       state = {
         mode: newMode,
@@ -581,29 +602,29 @@
 
             <div class="flex items-center gap-1.5 shrink-0">
               <select
-                  onpointerdown="state.paused = true; render();"
-                  onfocus="state.paused = true; render();"
-                  onblur="state.paused = false; render();"
-                  onchange="state.paused = false; resetGame(state.maxHp, this.value);"
-                  aria-label="出題模式"
-                  class="bg-indigo-950 border border-indigo-500/70 text-indigo-100 text-xs md:text-sm font-bold rounded-lg px-2 py-1.5 cursor-pointer">
-                  <option value="mixed" ${state.mode === 'mixed' ? 'selected' : ''}>混合模式</option>
-                  <option value="division" ${state.mode === 'division' ? 'selected' : ''}>連除專攻模式</option>
-                  <option value="multistep" ${state.mode === 'multistep' ? 'selected' : ''}>多步驟計算模式</option>
-                </select>
-                <select
-                  onpointerdown="state.paused = true; render();"
-                  onfocus="state.paused = true; render();"
-                  onblur="state.paused = false; render();"
-                  onchange="state.paused = false; resetGame(Number(this.value), state.mode);"
-                  aria-label="怪獸血量"
-                  class="bg-slate-800 border border-slate-600 text-slate-200 text-xs md:text-sm font-bold rounded-lg px-2 py-1.5 cursor-pointer">
-                  <option value="10000" ${state.maxHp === 10000 ? 'selected' : ''}>血量 10,000</option>
-                  <option value="12000" ${state.maxHp === 12000 ? 'selected' : ''}>血量 12,000</option>
-                  <option value="18000" ${state.maxHp === 18000 ? 'selected' : ''}>血量 18,000</option>
-                  <option value="25000" ${state.maxHp === 25000 ? 'selected' : ''}>血量 25,000</option>
-                  <option value="30000" ${state.maxHp === 30000 ? 'selected' : ''}>血量 30,000</option>
-                </select>
+  onpointerdown="setPausedState(true);"
+  onfocus="setPausedState(true);"
+  onblur="setPausedState(false); render();"
+  onchange="setPausedState(false); resetGame(state.maxHp, this.value);"
+  aria-label="出題模式"
+  class="bg-indigo-950 border border-indigo-500/70 text-indigo-100 text-xs md:text-sm font-bold rounded-lg px-2 py-1.5 cursor-pointer">
+  <option value="mixed" ${state.mode === 'mixed' ? 'selected' : ''}>混合模式</option>
+  <option value="division" ${state.mode === 'division' ? 'selected' : ''}>連除專攻模式</option>
+  <option value="multistep" ${state.mode === 'multistep' ? 'selected' : ''}>多步驟計算模式</option>
+        </select>
+        <select
+          onpointerdown="setPausedState(true);"
+          onfocus="setPausedState(true);"
+          onblur="setPausedState(false); render();"
+          onchange="setPausedState(false); resetGame(Number(this.value), state.mode);"
+          aria-label="怪獸血量"
+          class="bg-slate-800 border border-slate-600 text-slate-200 text-xs md:text-sm font-bold rounded-lg px-2 py-1.5 cursor-pointer">
+          <option value="10000" ${state.maxHp === 10000 ? 'selected' : ''}>血量 10,000</option>
+          <option value="12000" ${state.maxHp === 12000 ? 'selected' : ''}>血量 12,000</option>
+          <option value="18000" ${state.maxHp === 18000 ? 'selected' : ''}>血量 18,000</option>
+          <option value="25000" ${state.maxHp === 25000 ? 'selected' : ''}>血量 25,000</option>
+          <option value="30000" ${state.maxHp === 30000 ? 'selected' : ''}>血量 30,000</option>
+        </select>
               <button onclick="state.soundEnabled = !state.soundEnabled; render();"
                 class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs md:text-sm font-bold cursor-pointer">
                 ${state.soundEnabled ? '🔊' : '🔇'}
