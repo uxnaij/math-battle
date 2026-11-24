@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>大屏看版與QR Code｜五組六棒接力打怪獸</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+    body { margin: 0; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; background: #0f172a; color: #f8fafc; overflow-x: hidden; }
+    @keyframes monsterIdle {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-6px); }
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px) rotate(-1.5deg); }
+      40% { transform: translateX(8px) rotate(1.5deg); }
+      60% { transform: translateX(-6px); }
+      80% { transform: translateX(6px); }
+    }
+    .animate-monster-idle { animation: monsterIdle 2.4s ease-in-out infinite; }
+    .animate-shake { animation: shake 0.36s ease-in-out; }
+  </style>
+</head>
+<body>
+  <div id="app" class="min-h-screen flex flex-col justify-between p-3 md:p-4 gap-3 bg-gradient-to-b from-slate-950 via-slate-900 to-indigo-950"></div>
+
+  <script>
+    const TEAM_SIZE = 6;
+    const ULTIMATE_BONUS_DAMAGE = 1000;
+
+    const GROUPS_META = [
+      { id: 1, name: '第 1 組', team: '烈焰隊', badgeBg: 'bg-rose-500', border: 'border-rose-500/80', headerBg: 'from-rose-600 to-rose-800', batonBg: 'bg-rose-500/25 border-rose-400 text-rose-200' },
+      { id: 2, name: '第 2 組', team: '疾風隊', badgeBg: 'bg-sky-500', border: 'border-sky-500/80', headerBg: 'from-sky-600 to-sky-800', batonBg: 'bg-sky-500/25 border-sky-400 text-sky-200' },
+      { id: 3, name: '第 3 組', team: '森靈隊', badgeBg: 'bg-emerald-500', border: 'border-emerald-500/80', headerBg: 'from-emerald-600 to-emerald-800', batonBg: 'bg-emerald-500/25 border-emerald-400 text-emerald-200' },
+      { id: 4, name: '第 4 組', team: '雷光隊', badgeBg: 'bg-amber-500', border: 'border-amber-500/80', headerBg: 'from-amber-600 to-amber-800', batonBg: 'bg-amber-500/25 border-amber-400 text-amber-200' },
+      { id: 5, name: '第 5 組', team: '幻紫隊', badgeBg: 'bg-violet-500', border: 'border-violet-500/80', headerBg: 'from-violet-600 to-violet-800', batonBg: 'bg-violet-500/25 border-violet-400 text-violet-200' }
+    ];
+
+    function initGroups() {
+      return GROUPS_META.map(meta => ({
+        ...meta,
+        runnerCount: TEAM_SIZE,
+        damage: 0,
+        correctCount: 0,
+        currentRunner: 1,
+        ultimateCount: 0
+      }));
+    }
+
+    let state = {
+      maxHp: 10000,
+      hp: 10000,
+      paused: false,
+      ended: false,
+      zoomQr: false,
+      monsterHit: false,
+      bannerText: '📱 請各組拿平板掃描右側 QR Code 進入作答，教師也可直接點擊卡片幫各組加分／推進棒次！',
+      groups: initGroups()
+    };
+
+    function getTabletUrl() {
+      return new URL('./math_battle_tablet.html', window.location.href).href;
+    }
+
+    function applyManualHit(groupId, baseDamage = 240) {
+      if (state.paused || state.ended) return;
+      const g = state.groups.find(item => item.id === groupId);
+      if (!g) return;
+
+      const maxRunners = g.runnerCount || TEAM_SIZE;
+      const isLastRunner = g.currentRunner >= maxRunners;
+      const totalAttempt = baseDamage + (isLastRunner ? ULTIMATE_BONUS_DAMAGE : 0);
+      const actualDmg = Math.min(state.hp, totalAttempt);
+
+      g.damage += actualDmg;
+      g.correctCount += 1;
+      state.hp = Math.max(0, state.hp - actualDmg);
+      state.monsterHit = true;
+
+      if (isLastRunner) {
+        g.currentRunner = 1;
+        g.ultimateCount += 1;
+        state.bannerText = `💥 ${g.name}（${g.team}）完成 ${maxRunners} 棒接力！發動合體大招暴擊 -${actualDmg} 傷！`;
+      } else {
+        g.currentRunner += 1;
+        state.bannerText = `⚔️ ${g.name}（${g.team}）推進至第 ${g.currentRunner}/${maxRunners} 棒（造成 ${actualDmg} 傷）！`;
+      }
+
+      setTimeout(() => {
+        state.monsterHit = false;
+        render();
+      }, 360);
+
+      if (state.hp <= 0) {
+        state.ended = true;
+      }
+      render();
+    }
+
+    function adjustRunnerCount(groupId, delta) {
+      const g = state.groups.find(item => item.id === groupId);
+      if (!g) return;
+      const next = Math.max(3, Math.min(8, (g.runnerCount || TEAM_SIZE) + delta));
+      g.runnerCount = next;
+      if (g.currentRunner > next) g.currentRunner = next;
+      render();
+    }
+
+    function resetBoard(newMaxHp = state.maxHp) {
+      state = {
+        maxHp: newMaxHp,
+        hp: newMaxHp,
+        paused: false,
+        ended: false,
+        zoomQr: false,
+        monsterHit: false,
+        bannerText: `新回合開始（巨獸血量 ${newMaxHp.toLocaleString()}）！各組平板準備開戰！`,
+        groups: initGroups()
+      };
+      render();
+    }
+
+    function renderQrCodes() {
+      const url = getTabletUrl();
+      const sideBox = document.getElementById('board-qr-side');
+      const sideUrl = document.getElementById('board-qr-url');
+      if (sideUrl) sideUrl.textContent = url;
+      if (sideBox && typeof QRCode !== 'undefined') {
+        sideBox.innerHTML = '';
+        new QRCode(sideBox, { text: url, width: 168, height: 168 });
+      }
+
+      if (state.zoomQr) {
+        const modalBox = document.getElementById('board-qr-modal');
+        const modalUrl = document.getElementById('board-qr-modal-url');
+        if (modalUrl) modalUrl.textContent = url;
+        if (modalBox && typeof QRCode !== 'undefined') {
+          modalBox.innerHTML = '';
+          new QRCode(modalBox, { text: url, width: 280, height: 280 });
+        }
+      }
+    }
+
+    function renderSummary() {
+      const sorted = [...state.groups].sort((a, b) => b.damage - a.damage);
+      const mvp = sorted[0];
+
+      return `
+        <div class="max-w-7xl w-full mx-auto flex-1 flex flex-col justify-center gap-5 py-2">
+          <div class="bg-slate-900/95 border-2 border-amber-400/60 rounded-3xl p-6 flex flex-wrap items-center justify-between gap-4 shadow-2xl">
+            <div>
+              <div class="text-amber-300 text-sm font-black tracking-wider uppercase">CLASSROOM LEADERBOARD · 五組輸出總結算</div>
+              <h1 class="text-3xl md:text-5xl font-black text-white mt-1">
+                ${state.hp <= 0 ? '🎉 括號混沌巨獸已被全班合力擊敗！' : '🏆 本回合各組輸出傷害排行榜'}
+              </h1>
+              <p class="text-slate-200 text-lg md:text-xl mt-2">
+                全班最高輸出：👑 <span class="text-amber-300 font-black">${mvp.name}（${mvp.team}）</span>，累積造成 <span class="text-rose-400 font-black">${mvp.damage.toLocaleString()}</span> 點傷害！
+              </p>
+            </div>
+            <button type="button" onclick="resetBoard();"
+              class="px-6 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xl cursor-pointer shadow-lg">
+              🔄 開啟下一回合
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            ${sorted.map((g, idx) => `
+              <div class="rounded-3xl p-5 border-2 flex flex-col justify-between ${idx === 0 ? 'bg-amber-500/15 border-amber-400 scale-[1.02]' : 'bg-slate-900/90 border-slate-700'}">
+                <div>
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="font-black text-2xl text-white">${idx === 0 ? '👑 ' : `#${idx + 1} `}${g.name}</span>
+                    <span class="text-xs px-2.5 py-1 rounded-full ${g.badgeBg} text-white font-black">${g.team}</span>
+                  </div>
+                  <div class="text-4xl font-black text-rose-400 mt-4">${g.damage.toLocaleString()}</div>
+                  <div class="text-sm text-slate-400 font-bold">總輸出傷害</div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-800 flex flex-col gap-1 text-sm font-bold">
+                  <div class="text-amber-300">🔥 合體大招：${g.ultimateCount} 次</div>
+                  <div class="text-slate-300">✅ 答對推進：${g.correctCount} 題</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderBoard() {
+      const hpPct = Math.max(0, Math.min(100, (state.hp / state.maxHp) * 100));
+      const sortedRank = [...state.groups].sort((a, b) => b.damage - a.damage);
+      const rankMap = new Map(sortedRank.map((g, idx) => [g.id, idx + 1]));
+
+      return `
+        ${state.zoomQr ? `
+          <div class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-xs flex items-center justify-center p-4"
+            onclick="state.zoomQr = false; render();">
+            <div class="bg-slate-900 border-2 border-emerald-400 rounded-3xl p-7 max-w-md w-full text-center flex flex-col items-center gap-4 shadow-2xl"
+              onclick="event.stopPropagation();">
+              <div class="text-2xl font-black text-white">📱 平板掃描 QR Code 進入作答</div>
+              <div id="board-qr-modal" class="bg-white p-5 rounded-2xl shadow-lg"></div>
+              <div id="board-qr-modal-url" class="text-sm text-emerald-200 font-bold break-all select-all bg-slate-950 px-3.5 py-2.5 rounded-xl w-full"></div>
+              <button type="button" onclick="state.zoomQr = false; render();"
+                class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-lg cursor-pointer">
+                關閉放大視窗
+              </button>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- 頂部：巨獸血條與主控按鈕 -->
+        <div class="bg-slate-900/95 border border-slate-700/80 rounded-3xl px-5 py-3.5 shadow-xl">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3.5 min-w-0">
+              <div class="${state.monsterHit ? 'animate-shake' : 'animate-monster-idle'} w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-800 border border-purple-300/40 flex items-center justify-center shrink-0 shadow-lg">
+                <svg viewBox="0 0 120 120" class="w-11 h-11">
+                  <rect x="20" y="24" width="80" height="76" rx="22" fill="${state.monsterHit ? '#fb7185' : '#a855f7'}" />
+                  <circle cx="44" cy="54" r="9" fill="#fff" />
+                  <circle cx="76" cy="54" r="9" fill="#fff" />
+                  <circle cx="45" cy="55" r="4" fill="#1e1b4b" />
+                  <circle cx="75" cy="55" r="4" fill="#1e1b4b" />
+                  <path d="M38 78 Q60 66 82 78" stroke="#fef08a" stroke-width="5" fill="none" stroke-linecap="round" />
+                </svg>
+              </div>
+              <div class="min-w-0">
+                <div class="flex items-center gap-2.5 flex-wrap">
+                  <span class="font-black text-2xl md:text-3xl text-white">括號混沌巨獸 · 大屏戰況看版</span>
+                  <span class="text-sm md:text-base px-3 py-0.5 rounded-full bg-rose-500/25 border border-rose-400/50 text-rose-200 font-black">
+                    HP ${state.hp.toLocaleString()} / ${state.maxHp.toLocaleString()}
+                  </span>
+                </div>
+                <div class="text-sm md:text-base text-amber-200 font-bold truncate mt-1">${state.bannerText}</div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0 flex-wrap">
+              <select
+                onchange="resetBoard(Number(this.value));"
+                aria-label="怪獸血量"
+                class="bg-slate-800 border border-slate-600 text-slate-100 text-sm font-bold rounded-xl px-3 py-2 cursor-pointer">
+                <option value="10000" ${state.maxHp === 10000 ? 'selected' : ''}>血量 10,000</option>
+                <option value="12000" ${state.maxHp === 12000 ? 'selected' : ''}>血量 12,000</option>
+                <option value="18000" ${state.maxHp === 18000 ? 'selected' : ''}>血量 18,000</option>
+                <option value="25000" ${state.maxHp === 25000 ? 'selected' : ''}>血量 25,000</option>
+                <option value="30000" ${state.maxHp === 30000 ? 'selected' : ''}>血量 30,000</option>
+              </select>
+              <button type="button" onclick="state.zoomQr = true; render();"
+                class="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-black cursor-pointer">
+                🔍 放大 QR Code
+              </button>
+              <button type="button" onclick="state.paused = !state.paused; render();"
+                class="px-3.5 py-2 rounded-xl ${state.paused ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600'} text-sm font-bold cursor-pointer">
+                ${state.paused ? '▶ 繼續' : '⏸ 暫停'}
+              </button>
+              <button type="button" onclick="state.ended = true; render();"
+                class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-black cursor-pointer">
+                🏆 結算排行
+              </button>
+              <button type="button" onclick="resetBoard();"
+                class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-sm font-bold cursor-pointer">
+                ↺
+              </button>
+            </div>
+          </div>
+
+          <div class="w-full h-4 bg-slate-950 rounded-full overflow-hidden border border-slate-700 mt-2.5">
+            <div style="width: ${hpPct}%" class="h-full transition-all duration-300 bg-gradient-to-r from-rose-500 via-amber-400 to-emerald-400"></div>
+          </div>
+        </div>
+
+        <!-- 主體：左側五組即時排行＋接力進度，右側 QR Code 掃碼區 -->
+        <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-0">
+          <div class="lg:col-span-9 grid grid-cols-1 sm:grid-cols-5 gap-2.5">
+            ${state.groups.map(g => {
+              const rank = rankMap.get(g.id);
+              const maxRunners = g.runnerCount || TEAM_SIZE;
+              const isUltimateReady = g.currentRunner >= maxRunners;
+
+              return `
+                <div class="bg-slate-900/95 border-2 ${g.border} rounded-3xl flex flex-col justify-between overflow-hidden shadow-xl">
+                  <div class="bg-gradient-to-r ${g.headerBg} px-3.5 py-2.5 text-white">
+                    <div class="flex items-center justify-between gap-1">
+                      <span class="font-black text-xl">${rank === 1 && g.damage > 0 ? '👑 ' : `#${rank} `}${g.name}</span>
+                      <span class="text-xs font-black bg-black/30 px-2 py-0.5 rounded-lg">${g.team}</span>
+                    </div>
+                  </div>
+
+                  <div class="p-3.5 flex-1 flex flex-col justify-between gap-3">
+                    <div>
+                      <div class="text-xs text-slate-400 font-bold">累積輸出傷害</div>
+                      <div class="text-3xl xl:text-4xl font-black text-rose-400 mt-0.5">${g.damage.toLocaleString()}</div>
+                      <div class="text-xs text-amber-300 font-bold mt-1">🔥 合體大招：${g.ultimateCount} 次 · 答對 ${g.correctCount} 題</div>
+                    </div>
+
+                    <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-2.5">
+                      <div class="flex items-center justify-between text-xs font-black mb-1.5">
+                        <span class="${isUltimateReady ? 'text-amber-300 animate-pulse' : 'text-slate-200'}">
+                          ${isUltimateReady ? `💥 第 ${g.currentRunner}/${maxRunners} 棒（大招）` : `🏃 第 ${g.currentRunner}/${maxRunners} 棒`}
+                        </span>
+                        <div class="flex items-center gap-1">
+                          <button type="button" onclick="adjustRunnerCount(${g.id}, -1)" title="減少本組棒數"
+                            class="w-5 h-5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-black cursor-pointer">−</button>
+                          <button type="button" onclick="adjustRunnerCount(${g.id}, 1)" title="增加本組棒數"
+                            class="w-5 h-5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-black cursor-pointer">＋</button>
+                        </div>
+                      </div>
+                      <div class="flex flex-wrap gap-1">
+                        ${Array.from({ length: maxRunners }, (_, idx) => {
+                          const num = idx + 1;
+                          const done = num < g.currentRunner;
+                          const active = num === g.currentRunner;
+                          return `<span class="w-5 h-5 rounded-full text-[11px] font-black flex items-center justify-center ${
+                            done ? 'bg-emerald-500 text-slate-950' : active ? 'bg-amber-400 text-slate-950 ring-2 ring-white' : 'bg-slate-800 text-slate-500'
+                          }">${num}</span>`;
+                        }).join('')}
+                      </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-1.5">
+                      <button type="button" onclick="applyManualHit(${g.id}, 240)" ${state.paused ? 'disabled' : ''}
+                        class="w-full py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-black text-xs xl:text-sm cursor-pointer transition">
+                        ⚔️ 答對推進（+240）
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <!-- 右側常駐 QR Code 掃碼區 -->
+          <div class="lg:col-span-3 bg-slate-900/95 border-2 border-emerald-500/60 rounded-3xl p-4 flex flex-col items-center justify-between text-center gap-3 shadow-xl">
+            <div>
+              <div class="inline-block px-3 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 text-xs font-black">
+                TABLET ENTRY
+              </div>
+              <h2 class="text-xl font-black text-white mt-1.5">📱 平板掃碼加入</h2>
+              <p class="text-xs text-slate-300 mt-1">學生免打網址，平板相機掃描直接選組作答</p>
+            </div>
+
+            <div onclick="state.zoomQr = true; render();" title="點擊放大 QR Code"
+              class="bg-white p-3.5 rounded-2xl shadow-lg cursor-pointer hover:scale-[1.03] transition">
+              <div id="board-qr-side"></div>
+            </div>
+
+            <div class="w-full">
+              <div id="board-qr-url" class="text-[11px] text-slate-400 break-all select-all bg-slate-950/90 border border-slate-800 px-2.5 py-1.5 rounded-xl"></div>
+              <button type="button" onclick="state.zoomQr = true; render();"
+                class="mt-2 w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm cursor-pointer">
+                🔍 點擊放大讓後排掃描
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function render() {
+      const root = document.getElementById('app');
+      root.innerHTML = state.ended ? renderSummary() : renderBoard();
+      if (!state.ended) {
+        renderQrCodes();
+      }
+    }
+
+    render();
+  </script>
+</body>
+</html>
