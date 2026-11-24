@@ -42,6 +42,12 @@
   <script>
     const TEAM_SIZE = 6;
 
+    const MODE_LABELS = {
+      mixed: '混合模式',
+      division: '連除專攻模式',
+      multistep: '多步驟計算模式'
+    };
+
     const QUESTION_BANK = [
       // ★1 基礎型（120 傷）
       { id: 'n1', stars: 1, category: '連加湊整', text: '135 + 165 + 240 = ?', options: [540, 530, 550, 440], answer: 540, hint: '先算 135 + 165 = 300，再算 300 + 240 = 540' },
@@ -117,6 +123,18 @@
       { id: 'w15', stars: 2, category: '社團經費', text: '社團有 1200 元，買 4 顆排球每顆 220 元後，剩下的錢剛好買 8 瓶水，每瓶水幾元？', options: [40, 320, 880, 50], answer: 40, hint: '剩餘 1200 − 220 × 4 = 320 元，每瓶水 320 ÷ 8 = 40 元' }
     ];
 
+    const DIVISION_CATEGORIES = new Set(['連除基礎', '連除交換', '分層裝箱', '烘焙分工', '工廠包裝', '圖書整理']);
+
+    function getPoolByMode(mode) {
+      if (mode === 'division') {
+        return QUESTION_BANK.filter(q => DIVISION_CATEGORIES.has(q.category));
+      }
+      if (mode === 'multistep') {
+        return QUESTION_BANK.filter(q => !DIVISION_CATEGORIES.has(q.category));
+      }
+      return QUESTION_BANK;
+    }
+
     const GROUPS_META = [
       { id: 1, name: '第 1 組', team: '烈焰隊', badgeBg: 'bg-rose-500', border: 'border-rose-500/75', headerBg: 'from-rose-600/95 to-rose-800/95', btnHover: 'hover:border-rose-400 hover:bg-rose-500/15', batonBg: 'bg-rose-500/20 border-rose-400 text-rose-200' },
       { id: 2, name: '第 2 組', team: '疾風隊', badgeBg: 'bg-sky-500', border: 'border-sky-500/75', headerBg: 'from-sky-600/95 to-sky-800/95', btnHover: 'hover:border-sky-400 hover:bg-sky-500/15', batonBg: 'bg-sky-500/20 border-sky-400 text-sky-200' },
@@ -180,9 +198,10 @@
       } catch (e) {}
     }
 
-    function pickQuestion(excludeIds = []) {
-      const pool = QUESTION_BANK.filter(q => !excludeIds.includes(q.id));
-      const source = pool.length > 0 ? pool : QUESTION_BANK;
+    function pickQuestion(excludeIds = [], mode = 'mixed') {
+      const modePool = getPoolByMode(mode);
+      const pool = modePool.filter(q => !excludeIds.includes(q.id));
+      const source = pool.length > 0 ? pool : modePool;
       const wordPool = source.filter(q => q.id.startsWith('w'));
       const numPool = source.filter(q => !q.id.startsWith('w'));
       const pickFrom = (Math.random() < 0.45 && wordPool.length > 0) ? wordPool : (numPool.length > 0 ? numPool : source);
@@ -191,10 +210,10 @@
       return { ...q, shuffledOptions, startedAt: Date.now() };
     }
 
-    function initGroups() {
+    function initGroups(mode = 'mixed') {
       const used = [];
       return GROUPS_META.map(meta => {
-        const q = pickQuestion(used);
+        const q = pickQuestion(used, mode);
         used.push(q.id);
         return {
           ...meta,
@@ -212,12 +231,13 @@
     }
 
     let state = {
+      mode: 'mixed',
       maxHp: 10000,
       hp: 10000,
       paused: false,
       ended: false,
       soundEnabled: true,
-      bannerText: '固定 6 棒接力制！每答對 1 題換下一棒上台按，輪完第 6 棒發動「合體大招 +1000 傷」！',
+      bannerText: '【混合模式】固定 6 棒接力制！輪完第 6 棒發動「合體大招 +1000 傷」！',
       monsterHit: false,
       floatingDamages: [],
       ultimateAlert: null,
@@ -225,7 +245,7 @@
       reviewTab: 'byQuestion',
       selectedReviewQId: null,
       showHintInReview: false,
-      groups: initGroups()
+      groups: initGroups('mixed')
     };
 
     function getSpeedMultiplier(startedAt) {
@@ -311,7 +331,7 @@
           return;
         }
 
-        g.question = pickQuestion(activeIds);
+        g.question = pickQuestion(activeIds, state.mode);
         render();
       } else {
         g.combo = 0;
@@ -332,14 +352,15 @@
       }
     }
 
-    function resetGame(newMaxHp = state.maxHp) {
+    function resetGame(newMaxHp = state.maxHp, newMode = state.mode) {
       state = {
+        mode: newMode,
         maxHp: newMaxHp,
         hp: newMaxHp,
         paused: false,
         ended: false,
         soundEnabled: state.soundEnabled,
-        bannerText: `新回合開始（總血量 ${newMaxHp}）！每組請派【第 1 棒】先出戰（共 6 棒接力）！`,
+        bannerText: `【${MODE_LABELS[newMode]}】新回合開始（總血量 ${newMaxHp.toLocaleString()}）！請派【第 1 棒】出戰！`,
         monsterHit: false,
         floatingDamages: [],
         ultimateAlert: null,
@@ -347,7 +368,7 @@
         reviewTab: 'byQuestion',
         selectedReviewQId: null,
         showHintInReview: false,
-        groups: initGroups()
+        groups: initGroups(newMode)
       };
       render();
     }
@@ -387,7 +408,7 @@
         <div class="max-w-7xl w-full mx-auto flex-1 flex flex-col gap-3 py-1">
           <div class="bg-slate-900/90 border border-amber-400/40 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-xl">
             <div>
-              <div class="text-amber-300 text-xs font-bold tracking-wider uppercase">BATTLE COMPLETE · 6 棒接力戰績與錯題診斷</div>
+              <div class="text-amber-300 text-xs font-bold tracking-wider uppercase">BATTLE COMPLETE · ${MODE_LABELS[state.mode]} · 6 棒接力戰績與錯題診斷</div>
               <h1 class="text-2xl md:text-3xl font-black text-white mt-0.5">
                 ${state.hp <= 0 ? '🎉 括號混沌巨獸已被全班合力擊敗！' : '📊 本回合戰況統計與錯題回顧'}
               </h1>
@@ -547,6 +568,9 @@
               <div class="min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
                   <span class="font-black text-lg md:text-xl text-white">括號混沌巨獸</span>
+                  <span class="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/25 border border-indigo-400/50 text-indigo-200 font-black">
+                    ${MODE_LABELS[state.mode]}
+                  </span>
                   <span class="text-xs md:text-sm px-2.5 py-0.5 rounded-full bg-rose-500/25 border border-rose-400/50 text-rose-200 font-black">
                     HP ${state.hp.toLocaleString()} / ${state.maxHp.toLocaleString()}
                   </span>
@@ -556,13 +580,19 @@
             </div>
 
             <div class="flex items-center gap-1.5 shrink-0">
-              <select onchange="resetGame(Number(this.value))" aria-label="怪獸血量"
+              <select onchange="resetGame(state.maxHp, this.value)" aria-label="出題模式"
+                class="bg-indigo-950 border border-indigo-500/70 text-indigo-100 text-xs md:text-sm font-bold rounded-lg px-2 py-1.5 cursor-pointer">
+                <option value="mixed" ${state.mode === 'mixed' ? 'selected' : ''}>混合模式</option>
+                <option value="division" ${state.mode === 'division' ? 'selected' : ''}>連除專攻模式</option>
+                <option value="multistep" ${state.mode === 'multistep' ? 'selected' : ''}>多步驟計算模式</option>
+              </select>
+              <select onchange="resetGame(Number(this.value), state.mode)" aria-label="怪獸血量"
                 class="bg-slate-800 border border-slate-600 text-slate-200 text-xs md:text-sm font-bold rounded-lg px-2 py-1.5 cursor-pointer">
-                <option value="5000" ${state.maxHp === 5000 ? 'selected' : ''}>血量 5,000</option>
-                <option value="8000" ${state.maxHp === 10000 ? 'selected' : ''}>血量 8,000</option>
+                <option value="10000" ${state.maxHp === 10000 ? 'selected' : ''}>血量 10,000</option>
                 <option value="12000" ${state.maxHp === 12000 ? 'selected' : ''}>血量 12,000</option>
                 <option value="18000" ${state.maxHp === 18000 ? 'selected' : ''}>血量 18,000</option>
                 <option value="25000" ${state.maxHp === 25000 ? 'selected' : ''}>血量 25,000</option>
+                <option value="30000" ${state.maxHp === 30000 ? 'selected' : ''}>血量 30,000</option>
               </select>
               <button onclick="state.soundEnabled = !state.soundEnabled; render();"
                 class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs md:text-sm font-bold cursor-pointer">
