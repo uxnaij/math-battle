@@ -559,7 +559,7 @@
               </p>
             </div>
             <div class="flex gap-2">
-              <button type="button" onclick="state.joined = false; state.ended = false; render();"
+              <button type="button" onclick="/* keep state.joined unless user explicitly leaves */ state.ended = false; render();"
                 class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-bold text-sm cursor-pointer">
                 換組別
               </button>
@@ -726,7 +726,7 @@
                 <option value="division" ${state.mode === 'division' ? 'selected' : ''}>連除專攻模式</option>
                 <option value="multistep" ${state.mode === 'multistep' ? 'selected' : ''}>多步驟計算模式</option>
               </select>
-              <button type="button" onclick="state.joined = false; render();"
+              <button type="button" onclick="/* keep state.joined unless user explicitly leaves */ render();"
                 class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs md:text-sm font-bold cursor-pointer">
                 換組別
               </button>
@@ -911,6 +911,7 @@
         state.paused = Boolean(data.paused);
       }
       state.started = Boolean(data.started);
+      if (state.started && state.joined && !state.ended && typeof render === 'function') { render(); }
       state.ended = Boolean(data.ended);
       data.teams.forEach((t, idx) => {
         const g = state.groups[idx];
