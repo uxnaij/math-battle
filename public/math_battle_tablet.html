@@ -743,6 +743,7 @@
         const g = state.groups[idx];
         if (!g) return;
         g.damage = Number(t.damage ?? g.damage ?? 0);
+        if (t.correctCount !== undefined && t.correctCount !== null) { g.correctCount = Number(t.correctCount || 0); }
         if (t.combo !== undefined && t.combo !== null) { g.combo = Number(t.combo || 0); }
         g.runnerCount = 6;
         const serverRunner = Number(t.runner ?? 1);
@@ -788,6 +789,7 @@
             action: 'hit',
             teamIndex: groupId - 1,
             damage: damage,
+            correctCount: 1,
             advanceRunner: Boolean(advanceRunner),
             runnerCount: 6, combo: grp ? Number(grp.combo || 0) : 0,
             question: grp ? grp.question : null,

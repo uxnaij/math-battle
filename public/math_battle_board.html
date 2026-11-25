@@ -401,6 +401,7 @@
         const g = state.groups[idx];
         if (!g) return;
         g.damage = Number(t.damage ?? g.damage ?? 0);
+        g.correctCount = Number(t.correctCount ?? g.correctCount ?? 0);
         g.runnerCount = Number(t.runnerCount ?? g.runnerCount ?? TEAM_SIZE);
         g.currentRunner = Number(t.runner ?? g.currentRunner ?? 1);
       });
@@ -456,6 +457,7 @@
       if (Array.isArray(state.groups)) {
         state.groups.forEach(g => {
           g.damage = 0;
+          g.correctCount = 0;
           g.currentRunner = 1;
         });
       }
@@ -499,6 +501,7 @@
       if (Array.isArray(state.groups)) {
         state.groups.forEach(function (g) {
           g.damage = 0;
+          g.correctCount = 0;
           g.currentRunner = 1;
         });
       }

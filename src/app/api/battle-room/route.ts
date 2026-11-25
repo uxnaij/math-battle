@@ -9,6 +9,7 @@ interface TeamState {
   runner: number;
   runnerCount: number;
   combo?: number;
+  correctCount?: number;
   question?: unknown;
   eliminatedOptions?: number[];
 }
@@ -42,6 +43,7 @@ function createInitialRoom(room: string): RoomState {
     teams: TEAM_NAMES.map((name) => ({
       name,
       damage: 0,
+      correctCount: 0,
       runner: 1,
       runnerCount: 6,
     })),
@@ -162,6 +164,8 @@ export async function POST(req: NextRequest) {
       if (team) {
       if (typeof body.combo === "number" && !Number.isNaN(body.combo)) { team.combo = Math.max(0, Math.floor(body.combo)); }
         team.damage += damage;
+        const addCorrect = Math.max(0, Math.floor(Number(body.correctCount ?? 1)));
+        team.correctCount = Math.max(0, Math.floor(Number(team.correctCount ?? 0))) + addCorrect;
         state.hp = Math.max(0, state.hp - damage);
         if (Boolean(body.advanceRunner)) {
           team.runnerCount = 6;
