@@ -545,151 +545,92 @@
       `;
     }
     function renderTabletBattle() {
-      const g = state.groups.find(item => item.id === state.selectedGroupId) || state.groups[0];
-      const now = Date.now();
-      const isFrozen = (g.freezeUntil || 0) > now;
-      const myRunner = state.myRunnerNo || 1;
-      const curRunner = g.currentRunner || 1;
-      const isMyTurnRunner = myRunner === curRunner;
-      const eliminatedList = Array.isArray(g.eliminatedOptions) ? g.eliminatedOptions : [];
-      const optionsList = (g.question && Array.isArray(g.question.shuffledOptions))
-        ? g.question.shuffledOptions
-        : ((g.question && Array.isArray(g.question.options)) ? g.question.options : []);
+      try {
+        const g = (Array.isArray(state.groups) ? (state.groups.find(function (item) { return item.id === state.selectedGroupId; }) || state.groups[0]) : null);
+        if (!g) {
+          return '<div class="max-w-xl w-full mx-auto bg-slate-900 text-white p-6 rounded-2xl">正在載入小組資料...</div>';
+        }
+        const now = Date.now();
+        const isFrozen = (g.freezeUntil || 0) > now;
+        const myRunner = Number(state.myRunnerNo || 1);
+        const curRunner = Number(g.currentRunner || 1);
+        const isMyTurnRunner = myRunner === curRunner;
+        const eliminatedList = Array.isArray(g.eliminatedOptions) ? g.eliminatedOptions : [];
+        const optionsList = (g.question && Array.isArray(g.question.shuffledOptions))
+          ? g.question.shuffledOptions
+          : ((g.question && Array.isArray(g.question.options)) ? g.question.options : []);
 
-      const stars = Math.max(1, Math.min(5, Number((g.question && g.question.stars) || 1)));
-      const starIcons = '★'.repeat(stars) + '☆'.repeat(5 - stars);
-      const baseScore = Number((typeof STAR_BASE_DAMAGE === 'object' && STAR_BASE_DAMAGE[stars]) ? STAR_BASE_DAMAGE[stars] : stars * 100);
+        const stars = Math.max(1, Math.min(5, Number((g.question && g.question.stars) || 1)));
+        const starIcons = '\u2605'.repeat(stars) + '\u2606'.repeat(5 - stars);
+        const starTable = (typeof STAR_BASE_DAMAGE === 'object' && STAR_BASE_DAMAGE) ? STAR_BASE_DAMAGE : null;
+        const baseScore = Number((starTable && starTable[stars]) ? starTable[stars] : stars * 100);
 
-      const groupCombo = Number(g.combo || 0);
-      const comboMult = 1 + Math.min(groupCombo, 5) * 0.05;
+        const groupCombo = Number(g.combo || 0);
+        const comboMult = 1 + Math.min(groupCombo, 5) * 0.05;
 
-      const elapsedSec = (g.question && g.question.startedAt)
-        ? Math.max(0, (now - Number(g.question.startedAt)) / 1000)
-        : 0;
-      const speedInfo = (typeof getSpeedMultiplier === 'function' && g.question && g.question.startedAt)
-        ? getSpeedMultiplier(g.question.startedAt)
-        : { mult: 1, label: '標準作答' };
-      const speedMult = Number(speedInfo && speedInfo.mult ? speedInfo.mult : 1);
-      const speedLabel = (speedInfo && speedInfo.label) ? speedInfo.label : (speedMult > 1 ? '神速作答' : '穩定作答');
+        const elapsedSec = (g.question && g.question.startedAt)
+          ? Math.max(0, (now - Number(g.question.startedAt)) / 1000)
+          : 0;
+        const speedInfo = (typeof getSpeedMultiplier === 'function' && g.question && g.question.startedAt)
+          ? getSpeedMultiplier(g.question.startedAt)
+          : { mult: 1, label: '\u6a19\u6e96\u4f5c\u7b54' };
+        const speedMult = Number(speedInfo && speedInfo.mult ? speedInfo.mult : 1);
+        const speedLabel = (speedInfo && speedInfo.label) ? speedInfo.label : (speedMult > 1 ? '\u795e\u901f\u4f5c\u7b54' : '\u7a69\u5b9a\u4f5c\u7b54');
 
-      // 神速加分視窗以 15 秒為滿條參考，隨經過秒數遞減
-      const maxSpeedWindowSec = 15;
-      const speedBarPct = Math.max(8, Math.min(100, Math.round(((maxSpeedWindowSec - Math.min(maxSpeedWindowSec, elapsedSec)) / maxSpeedWindowSec) * 100)));
-      const estimatedDmg = Math.round(baseScore * speedMult * comboMult);
+        const maxSpeedWindowSec = 15;
+        const speedBarPct = Math.max(8, Math.min(100, Math.round(((maxSpeedWindowSec - Math.min(maxSpeedWindowSec, elapsedSec)) / maxSpeedWindowSec) * 100)));
+        const estimatedDmg = Math.round(baseScore * speedMult * comboMult);
 
-      let statusBanner = '';
-      if (!state.started) {
-        statusBanner = `
-          <div class="mb-4 px-4 py-3 rounded-2xl bg-amber-500/20 border border-amber-400/50 text-amber-200 text-sm font-black text-center">
-            ⏳ 尚未開始：請等大屏按下「開始對戰」後再作答（你是第 ${myRunner} 棒）
-          </div>
-        `;
-      } else if (!isMyTurnRunner) {
-        statusBanner = `
-          <div class="mb-4 px-4 py-3 rounded-2xl bg-sky-500/20 border border-sky-400/50 text-sky-200 text-sm font-black text-center">
-            👀 只能看題：你是第 ${myRunner} 棒，目前由「第 ${curRunner} 棒」作答
-          </div>
-        `;
-      } else {
-        statusBanner = `
-          <div class="mb-4 px-4 py-2 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 text-xs font-black text-center">
-            ⚔️ 輪到你作答：你是第 ${myRunner} 棒
-          </div>
-        `;
+        let statusBanner = '';
+        if (!state.started) {
+          statusBanner = '<div class="mb-4 px-4 py-3 rounded-2xl bg-amber-500/20 border border-amber-400/50 text-amber-200 text-sm font-black text-center">\u23f3 \u5c1a\u672a\u958b\u59cb\uff1a\u8acb\u7b49\u5927\u5c4f\u6309\u4e0b\u300c\u958b\u59cb\u5c0d\u6230\u300d\u5f8c\u518d\u4f5c\u7b54\uff08\u4f60\u662f\u7b2c ' + myRunner + ' \u68d2\uff09</div>';
+        } else if (!isMyTurnRunner) {
+          statusBanner = '<div class="mb-4 px-4 py-3 rounded-2xl bg-sky-500/20 border border-sky-400/50 text-sky-200 text-sm font-black text-center">\ud83d\udc40 \u53ea\u80fd\u770b\u984c\uff1a\u4f60\u662f\u7b2c ' + myRunner + ' \u68d2\uff0c\u76ee\u524d\u7531\u300c\u7b2c ' + curRunner + ' \u68d2\u300d\u4f5c\u7b54</div>';
+        } else {
+          statusBanner = '<div class="mb-4 px-4 py-2 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 text-xs font-black text-center">\u2694\ufe0f \u8f2a\u5230\u4f60\u4f5c\u7b54\uff1a\u4f60\u662f\u7b2c ' + myRunner + ' \u68d2</div>';
+        }
+
+        const speedFillClass = speedMult > 1 ? 'bg-gradient-to-r from-cyan-400 via-sky-400 to-emerald-400' : 'bg-slate-500';
+        const speedTextClass = speedMult > 1 ? 'text-cyan-300' : 'text-slate-300';
+
+        const bonusAndSpeedPanel =
+          '<div class="mb-4 space-y-2.5">' +
+            '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">' +
+              '<div class="px-3.5 py-2.5 rounded-2xl bg-amber-500/15 border border-amber-400/40 flex items-center justify-between"><span class="text-xs font-black text-amber-200">\ud83d\udd25 \u5c0f\u7d44\u9023\u64ca</span><span class="text-sm font-black text-amber-300">' + groupCombo + ' \u9023\u64ca\uff08\u00d7' + comboMult.toFixed(2) + '\uff09</span></div>' +
+              '<div class="px-3.5 py-2.5 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 flex items-center justify-between"><span class="text-xs font-black text-emerald-200">\ud83c\udfaf \u9810\u4f30\u672c\u984c\u5f97\u5206</span><span class="text-sm font-black text-emerald-300">\u7d04 ' + estimatedDmg.toLocaleString() + ' \u5206</span></div>' +
+            '</div>' +
+            '<div class="px-3.5 py-2.5 rounded-2xl bg-slate-800/85 border border-slate-700">' +
+              '<div class="flex items-center justify-between text-xs font-black mb-1.5"><span class="' + speedTextClass + '">\u26a1 ' + speedLabel + '\uff08\u795e\u901f \u00d7' + speedMult.toFixed(2) + '\uff09</span><span class="text-slate-400">\u5df2\u904e ' + elapsedSec.toFixed(1) + ' \u79d2</span></div>' +
+              '<div class="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-700/80"><div style="width: ' + speedBarPct + '%" class="h-full transition-all duration-300 ' + speedFillClass + '"></div></div>' +
+            '</div>' +
+          '</div>';
+
+        const optionsHtml = optionsList.map(function (opt, idx) {
+          const letter = ['A', 'B', 'C', 'D'][idx] || String(idx + 1);
+          const isEliminated = eliminatedList.includes(opt);
+          const isOptionDisabled = Boolean(!state.started || isEliminated || isFrozen || state.paused || !isMyTurnRunner);
+          const btnClass = isOptionDisabled
+            ? 'bg-slate-900/50 border-slate-800 text-slate-500 opacity-50 cursor-not-allowed'
+            : ('bg-slate-800/95 border-slate-600 text-white ' + (g.btnHover || 'hover:border-amber-400') + ' active:scale-[0.98] cursor-pointer');
+          return '<button type="button" onclick="handleTabletAnswer(' + opt + ')" ' + (isOptionDisabled ? 'disabled' : '') + ' class="w-full flex items-center justify-between px-4 py-4 md:py-5 rounded-2xl border-2 font-black transition ' + btnClass + '"><span class="text-base md:text-lg px-2.5 py-1 rounded-lg bg-slate-950/80 text-slate-300 mr-3 shrink-0">' + letter + '</span><span class="text-3xl sm:text-4xl md:text-5xl flex-1 text-center leading-none">' + opt + '</span></button>';
+        }).join('');
+
+        const qCategory = (g.question && g.question.category) ? g.question.category : '\u8a08\u7b97\u984c';
+        const qText = (g.question && g.question.text) ? g.question.text : '\u7b49\u5f85\u984c\u76ee\u8f09\u5165\u4e2d...';
+        const playerPrefix = state.playerLabel ? ('\u9078\u624b\uff1a' + state.playerLabel + ' \u00b7 ') : '';
+
+        return '<div class="max-w-4xl w-full mx-auto flex-1 flex flex-col justify-between gap-4">' +
+          '<div class="bg-slate-900/95 border-2 ' + (g.border || 'border-slate-700') + ' rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-xl"><div class="flex items-center gap-3"><span class="px-3 py-1 rounded-xl ' + (g.badgeBg || 'bg-indigo-600') + ' text-white font-black text-base md:text-lg">' + g.name + ' \u00b7 ' + g.team + '</span><div><div class="text-xs text-slate-300 font-bold">' + playerPrefix + '\u7b2c ' + myRunner + ' \u68d2\uff08\u76ee\u524d\u7b2c ' + curRunner + ' \u68d2\uff09</div><div class="text-xl md:text-2xl font-black text-rose-400">\u2694\ufe0f \u672c\u7d44\u8f38\u51fa\uff1a' + Number(g.damage || 0).toLocaleString() + ' \u9ede</div></div></div><button type="button" onclick="finishBattleNow();" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs md:text-sm font-black cursor-pointer">\ud83d\udcca \u7d50\u7b97\u6230\u7e3e</button></div>' +
+          '<div class="bg-slate-900/95 border border-slate-700/80 rounded-3xl p-5 md:p-7 flex-1 flex flex-col justify-between shadow-2xl"><div class="mb-5"><div class="flex flex-wrap items-center justify-between gap-2 mb-2"><span class="text-xs font-black text-amber-300 uppercase tracking-wider">' + qCategory + '</span><div class="flex items-center gap-2"><span class="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-200 text-xs font-black">\u96e3\u5ea6 ' + starIcons + '\uff08' + stars + ' \u661f\uff09</span><span class="px-2.5 py-1 rounded-lg bg-rose-500/20 border border-rose-400/40 text-rose-200 text-xs font-black">\u57fa\u790e ' + baseScore + ' \u5206</span></div></div><div class="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-relaxed break-words">' + qText + '</div></div>' +
+          bonusAndSpeedPanel + statusBanner +
+          '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">' + optionsHtml + '</div></div></div>';
+      } catch (err) {
+        console.error('renderTabletBattle error:', err);
+        return '<div class="max-w-xl w-full mx-auto bg-slate-900 border border-rose-500/50 text-rose-200 p-6 rounded-2xl font-bold">畫面渲染錯誤：' + String(err && err.message ? err.message : err) + '</div>';
       }
-
-      const bonusAndSpeedPanel = `
-        <div class="mb-4 space-y-2.5">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            <div class="px-3.5 py-2.5 rounded-2xl bg-amber-500/15 border border-amber-400/40 flex items-center justify-between">
-              <span class="text-xs font-black text-amber-200">🔥 小組連擊</span>
-              <span class="text-sm font-black text-amber-300">${groupCombo} 連擊（×${comboMult.toFixed(2)}）</span>
-            </div>
-            <div class="px-3.5 py-2.5 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 flex items-center justify-between">
-              <span class="text-xs font-black text-emerald-200">🎯 預估本題得分</span>
-              <span class="text-sm font-black text-emerald-300">約 ${estimatedDmg.toLocaleString()} 分</span>
-            </div>
-          </div>
-          <div class="px-3.5 py-2.5 rounded-2xl bg-slate-800/85 border border-slate-700">
-            <div class="flex items-center justify-between text-xs font-black mb-1.5">
-              <span class="${speedMult > 1 ? 'text-cyan-300' : 'text-slate-300'}">⚡ ${speedLabel}（神速 ×${speedMult.toFixed(2)}）</span>
-              <span class="text-slate-400">已過 ${elapsedSec.toFixed(1)} 秒</span>
-            </div>
-            <div class="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-700/80">
-              <div style="width: ${speedBarPct}%" class="h-full transition-all duration-300 ${speedMult > 1 ? 'bg-gradient-to-r from-cyan-400 via-sky-400 to-emerald-400' : 'bg-slate-500'}"></div>
-            </div>
-          </div>
-        </div>
-      `;
-
-      return `
-        <div class="max-w-4xl w-full mx-auto flex-1 flex flex-col justify-between gap-4">
-          <div class="bg-slate-900/95 border-2 ${g.border || 'border-slate-700'} rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-xl">
-            <div class="flex items-center gap-3">
-              <span class="px-3 py-1 rounded-xl ${g.badgeBg || 'bg-indigo-600'} text-white font-black text-base md:text-lg">
-                ${g.name} · ${g.team}
-              </span>
-              <div>
-                <div class="text-xs text-slate-300 font-bold">
-                  ${state.playerLabel ? `選手：${state.playerLabel} · ` : ''}第 ${myRunner} 棒（目前第 ${curRunner} 棒）
-                </div>
-                <div class="text-xl md:text-2xl font-black text-rose-400">
-                  ⚔️ 本組輸出：${Number(g.damage || 0).toLocaleString()} 點
-                </div>
-              </div>
-            </div>
-            <button type="button" onclick="finishBattleNow();"
-              class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs md:text-sm font-black cursor-pointer">
-              📊 結算戰績
-            </button>
-          </div>
-
-          <div class="bg-slate-900/95 border border-slate-700/80 rounded-3xl p-5 md:p-7 flex-1 flex flex-col justify-between shadow-2xl">
-            <div class="mb-5">
-              <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-                <span class="text-xs font-black text-amber-300 uppercase tracking-wider">
-                  ${g.question && g.question.category ? g.question.category : '計算題'}
-                </span>
-                <div class="flex items-center gap-2">
-                  <span class="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-200 text-xs font-black">
-                    難度 ${starIcons}（${stars} 星）
-                  </span>
-                  <span class="px-2.5 py-1 rounded-lg bg-rose-500/20 border border-rose-400/40 text-rose-200 text-xs font-black">
-                    基礎 ${baseScore} 分
-                  </span>
-                </div>
-              </div>
-              <div class="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-relaxed break-words">
-                ${g.question && g.question.text ? g.question.text : '等待題目載入中...'}
-              </div>
-            </div>
-
-            ${bonusAndSpeedPanel}
-            ${statusBanner}
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-              ${optionsList.map((opt, idx) => {
-                const letter = ['A', 'B', 'C', 'D'][idx] || String(idx + 1);
-                const isEliminated = eliminatedList.includes(opt);
-                const isOptionDisabled = Boolean(!state.started || isEliminated || isFrozen || state.paused || !isMyTurnRunner);
-                return `
-                  <button type="button" onclick="handleTabletAnswer(${opt})" ${isOptionDisabled ? 'disabled' : ''}
-                    class="w-full flex items-center justify-between px-4 py-4 md:py-5 rounded-2xl border-2 font-black transition ${
-                      isOptionDisabled
-                        ? 'bg-slate-900/50 border-slate-800 text-slate-500 opacity-50 cursor-not-allowed'
-                        : `bg-slate-800/95 border-slate-600 text-white ${g.btnHover || 'hover:border-amber-400'} active:scale-[0.98] cursor-pointer`
-                    }">
-                    <span class="text-base md:text-lg px-2.5 py-1 rounded-lg bg-slate-950/80 text-slate-300 mr-3 shrink-0">${letter}</span>
-                    <span class="text-3xl sm:text-4xl md:text-5xl flex-1 text-center leading-none">${opt}</span>
-                  </button>
-                `;
-              }).join('')}
-            </div>
-          </div>
-        </div>
-      `;
     }
-        function renderSummary() {
+
+            function renderSummary() {
       const sorted = [...state.groups].sort((a, b) => (b.damage || 0) - (a.damage || 0));
       const champion = sorted[0] || state.groups[0];
       const totalDmg = state.groups.reduce((acc, item) => acc + (item.damage || 0), 0);
