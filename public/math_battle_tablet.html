@@ -799,8 +799,7 @@
             </div>
 
                         const isMyTurnRunner = (state.myRunnerNo || 1) === g.currentRunner;
-            const isOptionDisabled = Boolean(!state.started || isEliminated || isFrozen || state.paused || !isMyTurnRunner);
-            ${!state.started ? `
+                        ${!state.started ? `
               <div class="mb-4 px-4 py-3 rounded-2xl bg-amber-500/20 border border-amber-400/50 text-amber-200 text-sm font-black text-center">
                 ⏳ 尚未開始：請等大屏按下「開始對戰」後再作答（目前僅可看題）
               </div>
@@ -827,6 +826,7 @@
               ${g.question.shuffledOptions.map((opt, idx) => {
                 const letter = ['A', 'B', 'C', 'D'][idx];
                 const isEliminated = g.eliminatedOptions.includes(opt);
+                  const isOptionDisabled = Boolean(!state.started || isEliminated || isFrozen || state.paused || ((state.myRunnerNo || 1) !== g.currentRunner));
                 return `
                   <button type="button" onclick="handleTabletAnswer(${opt})" ${isOptionDisabled ? 'disabled opacity-45 cursor-not-allowed' : 'cursor-pointer'} class="w-full flex items-center justify-between px-4 py-4 md:py-5 rounded-2xl border-2 font-black transition cursor-pointer ${
                       isEliminated
