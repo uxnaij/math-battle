@@ -682,15 +682,27 @@
         const g = state.groups[idx];
         if (!g) return;
         g.damage = Number(t.damage ?? g.damage ?? 0);
-        g.runnerCount = Number(t.runnerCount ?? g.runnerCount ?? TEAM_SIZE);
-        if (g.id !== state.selectedGroupId) {
-          g.currentRunner = Number(t.runner ?? g.currentRunner ?? 1);
+        g.runnerCount = 6;
+        const serverRunner = Number(t.runner ?? 1);
+        if (serverRunner >= 1 && serverRunner <= 6) {
+          g.currentRunner = serverRunner;
+        }
+        if (t.question && typeof t.question === 'object' && t.question.text) {
+          const isDifferentQ = !g.question || g.question.id !== t.question.id || g.question.text !== t.question.text;
+          if (isDifferentQ) {
+            g.question = {
+              ...t.question,
+              startedAt: t.question.startedAt || Date.now(),
+            };
+            g.eliminatedOptions = Array.isArray(t.eliminatedOptions) ? t.eliminatedOptions : [];
+          } else if (Array.isArray(t.eliminatedOptions) && t.eliminatedOptions.length > (g.eliminatedOptions || []).length) {
+            g.eliminatedOptions = t.eliminatedOptions;
+          }
         }
       });
     }
 
     async function syncTabletRoom() {
-      if (isTabletControlFocused()) return;
       try {
         const res = await fetch('/api/battle-room?room=' + encodeURIComponent(ROOM_ID), {
           cache: 'no-store',
@@ -698,7 +710,7 @@
         if (!res.ok) return;
         const data = await res.json();
         applyServerRoomStateToTablet(data);
-        if (!isTabletControlFocused()) {
+        if (state.joined && !isTabletControlFocused()) {
           render();
         }
       } catch (err) {
@@ -708,6 +720,7 @@
 
     async function sendTabletHitToServer(groupId, damage, advanceRunner) {
       try {
+        const grp = state.groups.find(item => item.id === groupId);
         const res = await fetch('/api/battle-room', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -717,12 +730,15 @@
             teamIndex: groupId - 1,
             damage: damage,
             advanceRunner: Boolean(advanceRunner),
+            runnerCount: 6,
+            question: grp ? grp.question : null,
+            eliminatedOptions: grp ? (grp.eliminatedOptions || []) : [],
           }),
         });
         if (res.ok) {
           const data = await res.json();
           applyServerRoomStateToTablet(data);
-          if (!isTabletControlFocused()) {
+          if (state.joined && !isTabletControlFocused()) {
             render();
           }
         }
