@@ -852,6 +852,33 @@
       const root = document.getElementById('app');
       if (state.ended) {
         root.innerHTML = renderSummary();
+      let overlay = document.getElementById('battle-waiting-overlay');
+      const shouldShowWait = Boolean(state.joined && !state.ended && !state.started);
+      if (shouldShowWait) {
+        const curGroup = state.groups.find(item => item.id === state.selectedGroupId) || state.groups[0];
+        const groupLabel = curGroup ? `${curGroup.name}（第 ${state.myRunnerNo || 1} 棒）` : `第 ${state.myRunnerNo || 1} 棒`;
+        if (!overlay) {
+          overlay = document.createElement('div');
+          overlay.id = 'battle-waiting-overlay';
+          overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(2,6,23,0.92);display:flex;align-items:center;justify-content:center;padding:24px;';
+          document.body.appendChild(overlay);
+        }
+        overlay.innerHTML = `
+          <div style="max-width:480px;width:100%;background:#0f172a;border:2px solid rgba(251,191,36,0.7);border-radius:24px;padding:32px;text-align:center;color:#f8fafc;box-shadow:0 25px 50px -12px rgba(0,0,0,0.75);">
+            <div style="font-size:48px;margin-bottom:12px;">⏳</div>
+            <div style="font-size:24px;font-weight:900;color:#fcd34d;margin-bottom:10px;">等待大屏按下「開始對戰」</div>
+            <div style="font-size:15px;font-weight:700;color:#cbd5e1;line-height:1.65;margin-bottom:20px;">
+              房間 <span style="color:#ffffff;">${ROOM_ID}</span> · <span style="color:#fde68a;">${groupLabel}</span><br/>
+              請先看題暖身，等大屏開始後全員同步作答！
+            </div>
+            <div style="display:inline-block;padding:8px 16px;border-radius:999px;background:rgba(245,158,11,0.18);border:1px solid rgba(251,191,36,0.45);color:#fde68a;font-size:13px;font-weight:800;">
+              ● 已連線同步中，等待大屏開始...
+            </div>
+          </div>
+        `;
+      } else if (overlay) {
+        overlay.remove();
+      }
       } else if (!state.joined) {
         root.innerHTML = renderJoinScreen();
       } else {
