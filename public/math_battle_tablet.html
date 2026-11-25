@@ -727,6 +727,21 @@
       return active.tagName === 'SELECT' || active.tagName === 'INPUT' || active.tagName === 'TEXTAREA';
     }
 
+    function syncGroupQuestionToServer(grp) {
+      if (!grp || !grp.question) return Promise.resolve();
+      return fetch('/api/battle-room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          room: ROOM_ID,
+          action: 'syncQuestion',
+          teamIndex: grp.id - 1,
+          question: grp.question,
+          eliminatedOptions: grp.eliminatedOptions || [],
+        }),
+      }).catch(() => {});
+    }
+
     function applyServerRoomStateToTablet(data) {
       const keepJoined = Boolean(state.joined);
       if (!data || !Array.isArray(data.teams)) return;
@@ -750,16 +765,15 @@
           g.currentRunner = serverRunner;
         }
         if (t.question && typeof t.question === 'object' && t.question.text) {
-          const isDifferentQ = !g.question || g.question.id !== t.question.id || g.question.text !== t.question.text;
-          if (isDifferentQ) {
-            g.question = {
-              ...t.question,
-              startedAt: t.question.startedAt || Date.now(),
-            };
-            g.eliminatedOptions = Array.isArray(t.eliminatedOptions) ? t.eliminatedOptions : [];
-          } else if (Array.isArray(t.eliminatedOptions) && t.eliminatedOptions.length > (g.eliminatedOptions || []).length) {
-            g.eliminatedOptions = t.eliminatedOptions;
-          }
+          const sameId = g.question && g.question.id === t.question.id && g.question.text === t.question.text;
+          g.question = {
+            ...t.question,
+            startedAt: sameId && g.question.startedAt ? g.question.startedAt : (t.question.startedAt || Date.now()),
+          };
+          g.eliminatedOptions = Array.isArray(t.eliminatedOptions) ? t.eliminatedOptions : [];
+        } else if (state.started && g.question) {
+          // 若伺服器該組尚無題目但本機已有題目，立刻補同步給同組其他棒次
+          syncGroupQuestionToServer(g);
         }
       });
     }
@@ -828,7 +842,7 @@
     }
 
     syncTabletRoom();
-    setInterval(syncTabletRoom, 2500);
+    setInterval(syncTabletRoom, 1500);
   </script>
 </body>
 </html>

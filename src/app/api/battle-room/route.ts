@@ -164,6 +164,12 @@ export async function POST(req: NextRequest) {
           team.runnerCount = 6;
           team.runner = team.runner < 6 ? team.runner + 1 : 1;
         }
+        if (body.question && typeof body.question === "object") {
+          team.question = body.question;
+        }
+        if (Array.isArray(body.eliminatedOptions)) {
+          team.eliminatedOptions = body.eliminatedOptions;
+        }
         if (state.hp === 0) {
           state.ended = true;
         }
