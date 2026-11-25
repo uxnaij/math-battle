@@ -364,6 +364,90 @@
         renderQrCodes();
       }
     }
+    const ROOM_ID = (new URLSearchParams(window.location.search).get('room') || '506').trim() || '506';
+
+    const _origGetTabletUrl = typeof getTabletUrl === 'function' ? getTabletUrl : null;
+    function getTabletUrl() {
+      const base = _origGetTabletUrl
+        ? _origGetTabletUrl()
+        : new URL('./math_battle_tablet.html', window.location.href).href;
+      const u = new URL(base);
+      u.searchParams.set('room', ROOM_ID);
+      return u.toString();
+    }
+
+    function applyServerRoomState(data) {
+      if (!data || !Array.isArray(data.teams)) return;
+      state.maxHp = Number(data.maxHp ?? state.maxHp ?? 10000);
+      state.hp = Number(data.hp ?? state.hp);
+      state.paused = Boolean(data.paused);
+      state.ended = Boolean(data.ended);
+      data.teams.forEach((t, idx) => {
+        const g = state.groups[idx];
+        if (!g) return;
+        g.damage = Number(t.damage ?? g.damage ?? 0);
+        g.runnerCount = Number(t.runnerCount ?? g.runnerCount ?? TEAM_SIZE);
+        g.currentRunner = Number(t.runner ?? g.currentRunner ?? 1);
+      });
+    }
+
+    async function syncRoomFromServer() {
+      try {
+        const res = await fetch('/api/battle-room?room=' + encodeURIComponent(ROOM_ID), {
+          cache: 'no-store',
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        applyServerRoomState(data);
+        render();
+      } catch (err) {
+        console.error('Board sync error:', err);
+      }
+    }
+
+    async function postRoomAction(payload) {
+      try {
+        const res = await fetch('/api/battle-room', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.assign({ room: ROOM_ID }, payload)),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          applyServerRoomState(data);
+          render();
+        }
+      } catch (err) {
+        console.error('Board action sync error:', err);
+      }
+    }
+
+    const _origResetBoard = typeof resetBoard === 'function' ? resetBoard : null;
+    if (_origResetBoard) {
+      window.resetBoard = function (newMaxHp) {
+        _origResetBoard(newMaxHp);
+        postRoomAction({ action: 'reset' });
+      };
+    }
+
+    const _origAdjustRunner = typeof adjustRunnerCount === 'function' ? adjustRunnerCount : null;
+    if (_origAdjustRunner) {
+      window.adjustRunnerCount = function (groupId, delta) {
+        _origAdjustRunner(groupId, delta);
+        const g = state.groups.find(item => item.id === groupId);
+        if (g) {
+          postRoomAction({
+            action: 'adjustRunnerCount',
+            teamIndex: g.id - 1,
+            runnerCount: g.runnerCount,
+          });
+        }
+      };
+    }
+
+    syncRoomFromServer();
+    setInterval(syncRoomFromServer, 2000);
+
 
     render();
   </script>

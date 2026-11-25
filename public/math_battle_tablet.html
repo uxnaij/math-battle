@@ -830,6 +830,86 @@
     }, 500);
 
     render();
-  </script>
+      const ROOM_ID = (new URLSearchParams(window.location.search).get('room') || '506').trim() || '506';
+
+    function applyServerRoomStateToTablet(data) {
+      if (!data || !Array.isArray(data.teams)) return;
+      state.maxHp = Number(data.maxHp ?? state.maxHp ?? 10000);
+      state.hp = Number(data.hp ?? state.hp);
+      if (typeof setPausedState === 'function') {
+        setPausedState(Boolean(data.paused));
+      } else {
+        state.paused = Boolean(data.paused);
+      }
+      state.ended = Boolean(data.ended);
+      data.teams.forEach((t, idx) => {
+        const g = state.groups[idx];
+        if (!g) return;
+        g.damage = Number(t.damage ?? g.damage ?? 0);
+        g.runnerCount = Number(t.runnerCount ?? g.runnerCount ?? TEAM_SIZE);
+        if (g.id !== state.selectedGroupId) {
+          g.currentRunner = Number(t.runner ?? g.currentRunner ?? 1);
+        }
+      });
+    }
+
+    async function syncTabletRoom() {
+      try {
+        const res = await fetch('/api/battle-room?room=' + encodeURIComponent(ROOM_ID), {
+          cache: 'no-store',
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        applyServerRoomStateToTablet(data);
+        render();
+      } catch (err) {
+        console.error('Tablet sync error:', err);
+      }
+    }
+
+    async function sendTabletHitToServer(groupId, damage, advanceRunner) {
+      try {
+        const res = await fetch('/api/battle-room', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            room: ROOM_ID,
+            action: 'hit',
+            teamIndex: groupId - 1,
+            damage: damage,
+            advanceRunner: Boolean(advanceRunner),
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          applyServerRoomStateToTablet(data);
+          render();
+        }
+      } catch (err) {
+        console.error('Tablet hit sync error:', err);
+      }
+    }
+
+    if (typeof handleTabletAnswer === 'function') {
+      const _origHandleTabletAnswer = handleTabletAnswer;
+      window.handleTabletAnswer = function (chosenValue) {
+        const g = state.groups.find(item => item.id === state.selectedGroupId);
+        const prevDamage = g ? g.damage : 0;
+        const prevRunner = g ? g.currentRunner : 1;
+        const isCorrect = g && g.question && chosenValue === g.question.answer;
+
+        _origHandleTabletAnswer(chosenValue);
+
+        if (g && isCorrect) {
+          const deltaDmg = Math.max(0, g.damage - prevDamage);
+          const didAdvance = g.currentRunner !== prevRunner;
+          sendTabletHitToServer(g.id, deltaDmg, didAdvance);
+        }
+      };
+    }
+
+    syncTabletRoom();
+    setInterval(syncTabletRoom, 2000);
+</script>
 </body>
 </html>
