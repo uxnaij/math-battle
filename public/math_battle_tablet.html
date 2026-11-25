@@ -666,7 +666,11 @@
       } else {
         state.paused = Boolean(data.paused);
       }
+      const prevStarted = Boolean(state.started);
       state.started = Boolean(data.started);
+      if (prevStarted && !state.started && !data.ended && !data.paused) {
+        state.started = true;
+      }
       state.ended = Boolean(data.ended);
       if (keepJoined && !state.ended) { state.joined = true; }
       data.teams.forEach((t, idx) => {
