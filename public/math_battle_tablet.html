@@ -798,33 +798,35 @@
               </div>
             </div>
 
-                        const isMyTurnRunner = (state.myRunnerNo || 1) === g.currentRunner;
-            const isOptionDisabled = Boolean(!state.started || isEliminated || isFrozen || state.paused || !isMyTurnRunner);
-                    ${!state.started ? `
-          <div class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-6">
-            <div class="max-w-lg w-full rounded-3xl bg-slate-900 border-2 border-amber-400/60 p-8 text-center shadow-2xl">
-              <div class="text-5xl mb-4">⏳</div>
-              <h2 class="text-2xl md:text-3xl font-black text-amber-300 mb-2">等待大屏按下「開始對戰」</h2>
-              <p class="text-slate-300 text-sm md:text-base font-bold mb-6">
-                你已進入房間 <span class="text-white">${ROOM_ID}</span> · <span class="text-amber-200">${g.name}（第 ${state.myRunnerNo || 1} 棒）</span><br/>
-                請先看題暖身，等大屏開始後全員同步作答！
-              </p>
-              <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/15 border border-amber-400/40 text-amber-200 text-xs font-black">
-                <span>● 已連線同步中，等待開戰訊號...</span>
-              </div>
-            </div>
-          </div>
-        ` : ''}
-            $(
-            (!isMyTurnRunner ? `
-              <div class="mb-4 px-4 py-3 rounded-2xl bg-sky-500/20 border border-sky-400/50 text-sky-200 text-sm font-black text-center">
-                👀 只能看題：你是第 ${state.myRunnerNo || 1} 棒，目前由「第 ${g.currentRunner} 棒」作答
-              </div>
-            ` : `
-              <div class="mb-4 px-4 py-2 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 text-xs font-black text-center">
-                ⚔️ 輪到你作答：你是第 ${state.myRunnerNo || 1} 棒（目前第 ${g.currentRunner} 棒）
-              </div>
-            `)}
+            ${(() => {
+              const isMyTurnRunner = (state.myRunnerNo || 1) === g.currentRunner;
+              const isOptionDisabled = Boolean(!state.started || isEliminated || isFrozen || state.paused || !isMyTurnRunner);
+              const waitingModal = !state.started ? `
+                <div class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-6">
+                  <div class="max-w-lg w-full rounded-3xl bg-slate-900 border-2 border-amber-400/60 p-8 text-center shadow-2xl">
+                    <div class="text-5xl mb-4">⏳</div>
+                    <h2 class="text-2xl md:text-3xl font-black text-amber-300 mb-2">等待大屏按下「開始對戰」</h2>
+                    <p class="text-slate-300 text-sm md:text-base font-bold mb-6">
+                      你已進入房間 <span class="text-white">${ROOM_ID}</span> · <span class="text-amber-200">${g.name}（第 ${state.myRunnerNo || 1} 棒）</span><br/>
+                      請先看題暖身，等大屏開始後全員同步作答！
+                    </p>
+                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/15 border border-amber-400/40 text-amber-200 text-xs font-black">
+                      <span>● 已連線同步中，等待開戰訊號...</span>
+                    </div>
+                  </div>
+                </div>
+              ` : '';
+              const turnBanner = !isMyTurnRunner ? `
+                <div class="mb-4 px-4 py-3 rounded-2xl bg-sky-500/20 border border-sky-400/50 text-sky-200 text-sm font-black text-center">
+                  👀 只能看題：你是第 ${state.myRunnerNo || 1} 棒，目前由「第 ${g.currentRunner} 棒」作答
+                </div>
+              ` : `
+                <div class="mb-4 px-4 py-2 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 text-xs font-black text-center">
+                  ⚔️ 輪到你作答：你是第 ${state.myRunnerNo || 1} 棒（目前第 ${g.currentRunner} 棒）
+                </div>
+              `;
+              return waitingModal + turnBanner;
+            })()}
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
               ${g.question.shuffledOptions.map((opt, idx) => {
                 const letter = ['A', 'B', 'C', 'D'][idx];
