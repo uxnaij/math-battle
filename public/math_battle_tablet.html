@@ -618,6 +618,31 @@
               </div>
             </div>
 
+                  const curCombo = Number(g.combo || 0);
+      const comboMult = 1 + Math.min(curCombo, 5) * 0.05;
+      const speedInfo = (typeof getSpeedMultiplier === 'function' && g.question && g.question.startedAt)
+        ? getSpeedMultiplier(g.question.startedAt)
+        : { mult: 1, label: '標準作答' };
+      const speedMult = Number(speedInfo && speedInfo.mult ? speedInfo.mult : 1);
+      const speedLabel = (speedInfo && speedInfo.label) ? speedInfo.label : (speedMult > 1 ? '神速作答' : '穩定作答');
+      const totalBonusPct = Math.round((comboMult * speedMult - 1) * 100);
+      const streakAndSpeedBar = `
+        <div class="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <div class="px-3.5 py-2.5 rounded-2xl bg-amber-500/15 border border-amber-400/40 flex items-center justify-between">
+            <span class="text-xs font-black text-amber-200">🔥 連續答對</span>
+            <span class="text-sm font-black text-amber-300">${curCombo} 連擊（×${comboMult.toFixed(2)}）</span>
+          </div>
+          <div class="px-3.5 py-2.5 rounded-2xl ${speedMult > 1 ? 'bg-cyan-500/15 border-cyan-400/45' : 'bg-slate-800/80 border-slate-700'} border flex items-center justify-between">
+            <span class="text-xs font-black ${speedMult > 1 ? 'text-cyan-200' : 'text-slate-300'}">⚡ ${speedLabel}</span>
+            <span class="text-sm font-black ${speedMult > 1 ? 'text-cyan-300' : 'text-slate-200'}">神速 ×${speedMult.toFixed(2)}</span>
+          </div>
+          <div class="px-3.5 py-2.5 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 flex items-center justify-between">
+            <span class="text-xs font-black text-emerald-200">✨ 預估加分加成</span>
+            <span class="text-sm font-black text-emerald-300">${totalBonusPct >= 0 ? `+${totalBonusPct}%` : `${totalBonusPct}%`}</span>
+          </div>
+        </div>
+      `;
+            ${streakAndSpeedBar}
             ${statusBanner}
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
