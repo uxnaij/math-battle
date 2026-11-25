@@ -16,6 +16,7 @@ interface RoomState {
   room: string;
   hp: number;
   maxHp: number;
+  started: boolean;
   paused: boolean;
   ended: boolean;
   teams: TeamState[];
@@ -37,6 +38,7 @@ function createInitialRoom(room: string): RoomState {
     room,
     hp: MAX_HP,
     maxHp: MAX_HP,
+    started: false,
     paused: false,
     ended: false,
     teams: TEAM_NAMES.map(function (name) {
@@ -92,6 +94,7 @@ function parseRoomPayload(raw: unknown, room: string): RoomState {
     room: String(r.room || room),
     hp: Number.isFinite(Number(r.hp)) ? Number(r.hp) : MAX_HP,
     maxHp: Number.isFinite(Number(r.maxHp)) ? Number(r.maxHp) : MAX_HP,
+    started: Boolean(r.started),
     paused: Boolean(r.paused),
     ended: Boolean(r.ended),
     teams: TEAM_NAMES.map(function (name, idx) {
@@ -169,6 +172,7 @@ async function saveRoom(state: RoomState): Promise<void> {
     room: state.room,
     hp: state.hp,
     maxHp: state.maxHp,
+    started: state.started,
     paused: state.paused,
     ended: state.ended,
     teams: state.teams,
@@ -242,6 +246,12 @@ export async function POST(req: NextRequest) {
     const action = String(body.action || "hit");
     const state = await loadRoom(room);
 
+    if (action === "start") {
+      state.started = true;
+      await saveRoom(state);
+      return NextResponse.json(state);
+    }
+
     if (action === "reset") {
       const requestedMaxHp = Number(body.maxHp);
       const nextMaxHp = Number.isFinite(requestedMaxHp) && requestedMaxHp >= 1000 ? Math.min(200000, Math.round(requestedMaxHp)) : MAX_HP;
@@ -278,7 +288,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "hit") {
-      if (!state.paused && !state.ended) {
+      if (state.started && !state.paused && !state.ended) {
         const teamIndex = Number(body.teamIndex ?? 0);
         const rawDmg = Number(body.damage ?? 0);
         const damage = Number.isFinite(rawDmg) ? Math.max(0, rawDmg) : 0;

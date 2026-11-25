@@ -276,10 +276,12 @@
     let state = {
       joined: false,
       selectedGroupId: 1,
+      myRunnerNo: 1,
       playerLabel: '',
       mode: 'mixed',
       maxHp: 10000,
       hp: 10000,
+      started: false,
       paused: false,
       ended: false,
       soundEnabled: true,
@@ -331,7 +333,9 @@
     }
 
     function handleTabletAnswer(chosenValue) {
-      if (state.paused || state.ended || !state.joined) return;
+      if (!state.started || state.paused || state.ended || !state.joined) return;
+      const _curG = state.groups.find(item => item.id === state.selectedGroupId);
+      if (_curG && (state.myRunnerNo || 1) !== _curG.currentRunner) return;
       const g = state.groups.find(item => item.id === state.selectedGroupId);
       if (!g) return;
       const now = Date.now();
@@ -408,17 +412,20 @@
     function resetGame(newMaxHp = state.maxHp, newMode = state.mode) {
       pausedAt = null;
       const keepGroupId = state.selectedGroupId;
+      const keepRunnerNo = state.myRunnerNo || 1;
       const keepLabel = state.playerLabel;
       const keepJoined = state.joined;
       state = {
         joined: keepJoined,
         selectedGroupId: keepGroupId,
+        myRunnerNo: keepRunnerNo,
         playerLabel: keepLabel,
         mode: newMode,
         maxHp: newMaxHp,
         hp: newMaxHp,
-        paused: false,
-        ended: false,
+        started: false,
+      paused: false,
+      ended: false,
         soundEnabled: state.soundEnabled,
         usedQuestionIds: [],
         bannerText: `【${MODE_LABELS[newMode]}】新回合開始！請派【第 1 棒】出戰！`,
@@ -524,6 +531,7 @@
             state.usedQuestionIds = [];
             state.errorLogs = [];
             state.groups = initGroups(m);
+            state.myRunnerNo = state.myRunnerNo || r;
             enterTabletBattle(state.selectedGroupId, r, lbl);
           " class="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xl md:text-2xl shadow-lg cursor-pointer transition">
             🚀 進入挑戰
@@ -790,13 +798,25 @@
               </div>
             </div>
 
+                        ${!state.started ? `
+              <div class="mb-4 px-4 py-3 rounded-2xl bg-amber-500/20 border border-amber-400/50 text-amber-200 text-sm font-black text-center">
+                ⏳ 尚未開始：請等大屏按下「開始對戰」後再作答（目前僅可看題）
+              </div>
+            ` : (!isMyTurnRunner ? `
+              <div class="mb-4 px-4 py-3 rounded-2xl bg-sky-500/20 border border-sky-400/50 text-sky-200 text-sm font-black text-center">
+                👀 只能看題：你是第 ${state.myRunnerNo || 1} 棒，目前由「第 ${g.currentRunner} 棒」作答
+              </div>
+            ` : `
+              <div class="mb-4 px-4 py-2 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 text-xs font-black text-center">
+                ⚔️ 輪到你作答：你是第 ${state.myRunnerNo || 1} 棒（目前第 ${g.currentRunner} 棒）
+              </div>
+            `)}
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
               ${g.question.shuffledOptions.map((opt, idx) => {
                 const letter = ['A', 'B', 'C', 'D'][idx];
                 const isEliminated = g.eliminatedOptions.includes(opt);
                 return `
-                  <button type="button" onclick="handleTabletAnswer(${opt})" ${isEliminated || isFrozen || state.paused ? 'disabled' : ''}
-                    class="w-full flex items-center justify-between px-4 py-4 md:py-5 rounded-2xl border-2 font-black transition cursor-pointer ${
+                  <button type="button" onclick="handleTabletAnswer(${opt})" ${isOptionDisabled ? 'disabled opacity-45 cursor-not-allowed' : 'cursor-pointer'} class="w-full flex items-center justify-between px-4 py-4 md:py-5 rounded-2xl border-2 font-black transition cursor-pointer ${
                       isEliminated
                         ? 'bg-slate-900/40 border-slate-800 text-slate-600 line-through cursor-not-allowed'
                         : `bg-slate-800/95 border-slate-600 text-white ${g.btnHover} active:scale-[0.98]`
@@ -847,6 +867,7 @@
       } else {
         state.paused = Boolean(data.paused);
       }
+      state.started = Boolean(data.started);
       state.ended = Boolean(data.ended);
       data.teams.forEach((t, idx) => {
         const g = state.groups[idx];

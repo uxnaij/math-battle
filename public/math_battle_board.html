@@ -54,7 +54,8 @@
       maxHp: 10000,
       hp: 10000,
       paused: false,
-      ended: false,
+      started: false,
+        ended: false,
       zoomQr: false,
       monsterHit: false,
       bannerText: '📱 請各組拿平板掃描右側 QR Code 進入作答，教師也可直接點擊卡片幫各組加分／推進棒次！',
@@ -114,6 +115,7 @@
         maxHp: newMaxHp,
         hp: newMaxHp,
         paused: false,
+        started: false,
         ended: false,
         zoomQr: false,
         monsterHit: false,
@@ -249,6 +251,10 @@
               <button type="button" onclick="state.zoomQr = true; render();"
                 class="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-black cursor-pointer">
                 🔍 放大 QR Code
+              </button>
+                            <button type="button" onclick="startBattleRoom();"
+                class="px-3.5 py-2 rounded-xl ${state.started ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/50' : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'} text-sm font-black cursor-pointer">
+                ${state.started ? '✓ 對戰進行中' : '▶ 開始對戰'}
               </button>
               <button type="button" onclick="state.paused = !state.paused; render();"
                 class="px-3.5 py-2 rounded-xl ${state.paused ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600'} text-sm font-bold cursor-pointer">
@@ -388,6 +394,7 @@
       state.maxHp = Number(data.maxHp ?? state.maxHp ?? 10000);
       state.hp = Number(data.hp ?? state.hp);
       state.paused = Boolean(data.paused);
+      state.started = Boolean(data.started);
       state.ended = Boolean(data.ended);
       data.teams.forEach((t, idx) => {
         const g = state.groups[idx];
@@ -443,6 +450,7 @@
       state.maxHp = targetMaxHp;
       state.hp = targetMaxHp;
       state.paused = false;
+      state.started = false;
       state.ended = false;
       if (Array.isArray(state.groups)) {
         state.groups.forEach(g => {
@@ -485,6 +493,7 @@
       state.maxHp = targetMaxHp;
       state.hp = targetMaxHp;
       state.paused = false;
+      state.started = false;
       state.ended = false;
       if (Array.isArray(state.groups)) {
         state.groups.forEach(function (g) {
@@ -513,6 +522,14 @@
         .catch(function (err) {
           console.error('Reset sync error:', err);
         });
+    };
+  
+    window.startBattleRoom = function () {
+      lastLocalActionAt = Date.now();
+      state.started = true;
+      state.paused = false;
+      safeRenderBoard();
+      return postRoomAction({ action: 'start' });
     };
   </script>
 </body>
