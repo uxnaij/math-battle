@@ -22,6 +22,7 @@ interface RoomState {
   updatedAt: number;
   storage?: "upstash" | "memory";
   redisError?: string;
+  pipelineResult?: unknown;
 }
 
 const globalForStore = globalThis as unknown as {
@@ -111,15 +112,27 @@ async function loadRoom(room: string): Promise<RoomState> {
   const { config: redis, reason } = getRedisConfig();
   if (redis) {
     try {
-      const res = await fetch(redis.url + "/get/" + encodeURIComponent(key), {
-        headers: { Authorization: "Bearer " + redis.token },
+      const res = await fetch(redis.url + "/pipeline", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + redis.token,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify([["GET", key]]),
         cache: "no-store",
       });
       const text = await res.text();
       if (res.ok && text) {
-        const data = JSON.parse(text);
-        if (data && data.result !== undefined && data.result !== null) {
-          const loaded = parseRoomPayload(data.result, room);
+        const arr = JSON.parse(text);
+        const first = Array.isArray(arr) ? arr[0] : null;
+        if (first && first.error) {
+          const fallback = memoryStore.get(room) || createInitialRoom(room);
+          fallback.storage = "memory";
+          fallback.redisError = "Pipeline GET error: " + String(first.error);
+          return fallback;
+        }
+        if (first && first.result !== undefined && first.result !== null) {
+          const loaded = parseRoomPayload(first.result, room);
           loaded.storage = "upstash";
           return loaded;
         }
@@ -130,7 +143,7 @@ async function loadRoom(room: string): Promise<RoomState> {
       }
       const fallback = memoryStore.get(room) || createInitialRoom(room);
       fallback.storage = "memory";
-      fallback.redisError = "GET status " + res.status + ": " + text.slice(0, 120);
+      fallback.redisError = "Pipeline status " + res.status + ": " + text.slice(0, 120);
       return fallback;
     } catch (err) {
       const fallback = memoryStore.get(room) || createInitialRoom(room);
@@ -163,22 +176,33 @@ async function saveRoom(state: RoomState): Promise<void> {
   };
   if (redis) {
     try {
-      const res = await fetch(redis.url + "/set/" + encodeURIComponent(key), {
+      const res = await fetch(redis.url + "/pipeline", {
         method: "POST",
         headers: {
           Authorization: "Bearer " + redis.token,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(JSON.stringify(payloadToStore)),
+        body: JSON.stringify([
+          ["SET", key, JSON.stringify(payloadToStore)],
+          ["GET", key],
+        ]),
         cache: "no-store",
       });
       const text = await res.text();
-      if (res.ok) {
-        state.storage = "upstash";
-        delete state.redisError;
+      if (res.ok && text) {
+        const arr = JSON.parse(text);
+        state.pipelineResult = arr;
+        const setRes = Array.isArray(arr) ? arr[0] : null;
+        if (setRes && !setRes.error) {
+          state.storage = "upstash";
+          delete state.redisError;
+        } else {
+          state.storage = "memory";
+          state.redisError = "Pipeline SET error: " + JSON.stringify(setRes);
+        }
       } else {
         state.storage = "memory";
-        state.redisError = "SET status " + res.status + ": " + text.slice(0, 120);
+        state.redisError = "Pipeline status " + res.status + ": " + text.slice(0, 120);
       }
     } catch (err) {
       state.storage = "memory";
