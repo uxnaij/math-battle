@@ -789,7 +789,7 @@
             action: 'hit',
             teamIndex: groupId - 1,
             damage: damage,
-            correctCount: 1,
+            correctCount: grp ? Number(grp.correctCount || 0) : Number(g ? g.correctCount || 0 : 0),correctCount: 1,
             advanceRunner: Boolean(advanceRunner),
             runnerCount: 6, combo: grp ? Number(grp.combo || 0) : 0,
             question: grp ? grp.question : null,
