@@ -559,7 +559,7 @@
               </p>
             </div>
             <div class="flex gap-2">
-              <button type="button" onclick="/* keep state.joined unless user explicitly leaves */ state.ended = false; render();"
+              <button type="button" onclick="state.joined = false; state.ended = false; render();"
                 class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-bold text-sm cursor-pointer">
                 換組別
               </button>
@@ -726,7 +726,7 @@
                 <option value="division" ${state.mode === 'division' ? 'selected' : ''}>連除專攻模式</option>
                 <option value="multistep" ${state.mode === 'multistep' ? 'selected' : ''}>多步驟計算模式</option>
               </select>
-              <button type="button" onclick="/* keep state.joined unless user explicitly leaves */ render();"
+              <button type="button" onclick="state.joined = false; render();"
                 class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs md:text-sm font-bold cursor-pointer">
                 換組別
               </button>
@@ -798,36 +798,32 @@
               </div>
             </div>
 
+                        const isMyTurnRunner = (state.myRunnerNo || 1) === g.currentRunner;
+            const isOptionDisabled = Boolean(!state.started || isEliminated || isFrozen || state.paused || !isMyTurnRunner);
+            ${!state.started ? `
+              <div class="mb-4 px-4 py-3 rounded-2xl bg-amber-500/20 border border-amber-400/50 text-amber-200 text-sm font-black text-center">
+                ⏳ 尚未開始：請等大屏按下「開始對戰」後再作答（目前僅可看題）
+              </div>
+            ` : (!isMyTurnRunner ? `
+              <div class="mb-4 px-4 py-3 rounded-2xl bg-sky-500/20 border border-sky-400/50 text-sky-200 text-sm font-black text-center">
+                👀 只能看題：你是第 ${state.myRunnerNo || 1} 棒，目前由「第 ${g.currentRunner} 棒」作答
+              </div>
+            ` : `
+              <div class="mb-4 px-4 py-2 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 text-xs font-black text-center">
+                ⚔️ 輪到你作答：你是第 ${state.myRunnerNo || 1} 棒（目前第 ${g.currentRunner} 棒）
+              </div>
+            `)}
             ${(() => {
-              const isMyTurnRunner = (state.myRunnerNo || 1) === g.currentRunner;
-              const isOptionDisabled = Boolean(!state.started || isEliminated || isFrozen || state.paused || !isMyTurnRunner);
-              const waitingModal = !state.started ? `
-                <div class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-6">
-                  <div class="max-w-lg w-full rounded-3xl bg-slate-900 border-2 border-amber-400/60 p-8 text-center shadow-2xl">
-                    <div class="text-5xl mb-4">⏳</div>
-                    <h2 class="text-2xl md:text-3xl font-black text-amber-300 mb-2">等待大屏按下「開始對戰」</h2>
-                    <p class="text-slate-300 text-sm md:text-base font-bold mb-6">
-                      你已進入房間 <span class="text-white">${ROOM_ID}</span> · <span class="text-amber-200">${g.name}（第 ${state.myRunnerNo || 1} 棒）</span><br/>
-                      請先看題暖身，等大屏開始後全員同步作答！
-                    </p>
-                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/15 border border-amber-400/40 text-amber-200 text-xs font-black">
-                      <span>● 已連線同步中，等待開戰訊號...</span>
-                    </div>
-                  </div>
-                </div>
-              ` : '';
-              const turnBanner = !isMyTurnRunner ? `
-                <div class="mb-4 px-4 py-3 rounded-2xl bg-sky-500/20 border border-sky-400/50 text-sky-200 text-sm font-black text-center">
-                  👀 只能看題：你是第 ${state.myRunnerNo || 1} 棒，目前由「第 ${g.currentRunner} 棒」作答
-                </div>
-              ` : `
-                <div class="mb-4 px-4 py-2 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 text-xs font-black text-center">
-                  ⚔️ 輪到你作答：你是第 ${state.myRunnerNo || 1} 棒（目前第 ${g.currentRunner} 棒）
-                </div>
-              `;
-              return waitingModal + turnBanner;
-            })()}
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+  const myRunner = state.myRunnerNo || 1;
+  const curRunner = g.currentRunner || 1;
+  if (!state.started) {
+    return '<div class="mb-4 px-4 py-3 rounded-2xl bg-amber-500/20 border border-amber-400/50 text-amber-200 text-sm font-black text-center">⏳ 尚未開始：請等大屏按下「開始對戰」後再作答（你目前是第 ' + myRunner + ' 棒）</div>';
+  }
+  if (myRunner !== curRunner) {
+    return '<div class="mb-4 px-4 py-3 rounded-2xl bg-sky-500/20 border border-sky-400/50 text-sky-200 text-sm font-black text-center">👀 只能看題：你是第 ' + myRunner + ' 棒，目前由「第 ' + curRunner + ' 棒」作答</div>';
+  }
+  return '<div class="mb-4 px-4 py-2 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 text-xs font-black text-center">⚔️ 輪到你作答：你是第 ' + myRunner + ' 棒</div>';
+})()}<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
               ${g.question.shuffledOptions.map((opt, idx) => {
                 const letter = ['A', 'B', 'C', 'D'][idx];
                 const isEliminated = g.eliminatedOptions.includes(opt);
@@ -848,7 +844,18 @@
       `;
     }
 
-        setInterval(() => {
+    function render() {
+      const root = document.getElementById('app');
+      if (state.ended) {
+        root.innerHTML = renderSummary();
+      } else if (!state.joined) {
+        root.innerHTML = renderJoinScreen();
+      } else {
+        root.innerHTML = renderTabletBattle();
+      }
+    }
+
+    setInterval(() => {
       if (state.joined && !state.ended && !state.paused) {
         render();
       }
@@ -864,7 +871,7 @@
     }
 
     function applyServerRoomStateToTablet(data) {
-      const lockedJoinedByBattle = Boolean(state.joined);
+      const keepJoined = Boolean(state.joined);
       if (!data || !Array.isArray(data.teams)) return;
       state.maxHp = Number(data.maxHp ?? state.maxHp ?? 10000);
       state.hp = Number(data.hp ?? state.hp);
@@ -874,9 +881,8 @@
         state.paused = Boolean(data.paused);
       }
       state.started = Boolean(data.started);
-      if (state.started && state.joined && !state.ended && typeof render === 'function') { render(); }
       state.ended = Boolean(data.ended);
-      if (lockedJoinedByBattle && !state.ended) { state.joined = true; }
+      if (keepJoined && !state.ended) { state.joined = true; }
       data.teams.forEach((t, idx) => {
         const g = state.groups[idx];
         if (!g) return;
@@ -950,43 +956,6 @@
 
     syncTabletRoom();
     setInterval(syncTabletRoom, 2500);
-  
-    function updateWaitingModal() {
-      let overlay = document.getElementById('battle-waiting-overlay');
-      const shouldShow = Boolean(typeof state !== 'undefined' && state.joined && !state.ended && !state.started);
-      if (!shouldShow) {
-        if (overlay) overlay.remove();
-        return;
-      }
-      const curGroup = Array.isArray(state.groups)
-        ? (state.groups.find(item => item.id === state.selectedGroupId) || state.groups[0])
-        : null;
-      const roomText = typeof ROOM_ID !== 'undefined' ? ROOM_ID : '506';
-      const runnerText = state.myRunnerNo || 1;
-      const groupText = curGroup ? `${curGroup.name}（第 ${runnerText} 棒）` : `第 ${runnerText} 棒`;
-
-      if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.id = 'battle-waiting-overlay';
-        overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(2,6,23,0.92);display:flex;align-items:center;justify-content:center;padding:24px;';
-        document.body.appendChild(overlay);
-      }
-      overlay.innerHTML = `
-        <div style="max-width:480px;width:100%;background:#0f172a;border:2px solid rgba(251,191,36,0.7);border-radius:24px;padding:32px;text-align:center;color:#f8fafc;box-shadow:0 25px 50px -12px rgba(0,0,0,0.75);">
-          <div style="font-size:48px;margin-bottom:12px;">⏳</div>
-          <div style="font-size:24px;font-weight:900;color:#fcd34d;margin-bottom:10px;">等待大屏按下「開始對戰」</div>
-          <div style="font-size:15px;font-weight:700;color:#cbd5e1;line-height:1.65;margin-bottom:20px;">
-            房間 <span style="color:#ffffff;">${roomText}</span> · <span style="color:#fde68a;">${groupText}</span><br/>
-            全班已進入準備區，等大屏開始後全員同步作答！
-          </div>
-          <div style="display:inline-block;padding:8px 16px;border-radius:999px;background:rgba(245,158,11,0.18);border:1px solid rgba(251,191,36,0.45);color:#fde68a;font-size:13px;font-weight:800;">
-            ● 已連線同步中，等待大屏開始...
-          </div>
-        </div>
-      `;
-    }
-
-    setInterval(updateWaitingModal, 300);
   </script>
 </body>
 </html>
