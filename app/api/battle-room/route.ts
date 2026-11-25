@@ -73,7 +73,24 @@ function parseRoomPayload(raw: unknown, room: string): RoomState {
   if (!parsed || typeof parsed !== "object" || !Array.isArray((parsed as RoomState).teams)) {
     return createInitialRoom(room);
   }
-  return parsed as RoomState;
+  const r = parsed as RoomState;
+  return {
+    room: String(r.room || room),
+    hp: Number.isFinite(Number(r.hp)) ? Number(r.hp) : MAX_HP,
+    maxHp: Number.isFinite(Number(r.maxHp)) ? Number(r.maxHp) : MAX_HP,
+    paused: Boolean(r.paused),
+    ended: Boolean(r.ended),
+    teams: TEAM_NAMES.map(function (name, idx) {
+      const item = r.teams[idx] || ({} as TeamState);
+      return {
+        name: String(item.name || name),
+        damage: Number.isFinite(Number(item.damage)) ? Number(item.damage) : 0,
+        runner: Number.isFinite(Number(item.runner)) ? Number(item.runner) : 1,
+        runnerCount: Number.isFinite(Number(item.runnerCount)) ? Number(item.runnerCount) : 6,
+      };
+    }),
+    updatedAt: Number(r.updatedAt || Date.now()),
+  };
 }
 
 async function loadRoom(room: string): Promise<RoomState> {
@@ -134,16 +151,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(state, { headers: { "Cache-Control": "no-store" } });
   } catch (err) {
     console.error("GET /api/battle-room error:", err);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ error: "GET failed", detail: String(err) }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(function () {
-      return {};
-    });
-    const room = String(body.room || req.nextUrl.searchParams.get("room") || "506").trim() || "506";
+    const rawBody = await req.text();
+    let body: Record<string, unknown> = {};
+    if (rawBody) {
+      try {
+        body = JSON.parse(rawBody) as Record<string, unknown>;
+      } catch {
+        body = {};
+      }
+    }
+    const qRoom = req.nextUrl.searchParams.get("room") || "506";
+    const room = String(body.room || qRoom || "506").trim() || "506";
     const action = String(body.action || "hit");
     const state = await loadRoom(room);
 
@@ -181,7 +205,8 @@ export async function POST(req: NextRequest) {
     if (action === "hit") {
       if (!state.paused && !state.ended) {
         const teamIndex = Number(body.teamIndex ?? 0);
-        const damage = Math.max(0, Number(body.damage ?? 0));
+        const rawDmg = Number(body.damage ?? 0);
+        const damage = Number.isFinite(rawDmg) ? Math.max(0, rawDmg) : 0;
         const team = state.teams[teamIndex];
         if (team) {
           team.damage += damage;
@@ -201,6 +226,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   } catch (err) {
     console.error("POST /api/battle-room error:", err);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ error: "POST failed", detail: String(err) }, { status: 500 });
   }
 }
