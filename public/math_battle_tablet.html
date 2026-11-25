@@ -282,7 +282,7 @@
       maxHp: 10000,
       hp: 10000,
       started: false,
-      teamRunnerCount: 3,
+      teamRunnerCount: 6,
       paused: false,
       ended: false,
       soundEnabled: true,
@@ -425,7 +425,7 @@
         maxHp: newMaxHp,
         hp: newMaxHp,
         started: false,
-      teamRunnerCount: 3,
+      teamRunnerCount: 6,
       paused: false,
       ended: false,
         soundEnabled: state.soundEnabled,
@@ -502,8 +502,8 @@
 
           <div class="mb-6">
             <div class="text-base font-black text-white mb-3">2. 選擇你的棒次</div>
-            <div class="grid grid-cols-3 gap-2.5">
-              ${Array.from({ length: state.teamRunnerCount || 3 }, (_, i) => i + 1).map(num => {
+            <div class="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
+              ${Array.from({ length: 6 }, (_, i) => i + 1).map(num => {
                 const isPicked = curRunner === num;
                 return `
                   <button
