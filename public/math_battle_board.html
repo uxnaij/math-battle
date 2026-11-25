@@ -403,7 +403,7 @@
     }
 
     async function syncRoomFromServer() {
-      if (Date.now() - lastLocalActionAt < 1200) return;
+      if (Date.now() - lastLocalActionAt < 1800) return;
       if (isUserInteractingWithSelect()) return;
       try {
         const res = await fetch('/api/battle-room?room=' + encodeURIComponent(ROOM_ID), {
@@ -411,7 +411,7 @@
         });
         if (!res.ok) return;
         const data = await res.json();
-        if (Date.now() - lastLocalActionAt < 1200) return;
+        if (Date.now() - lastLocalActionAt < 1800) return;
         applyServerRoomState(data);
         safeRenderBoard();
       } catch (err) {
@@ -437,41 +437,51 @@
       }
     }
 
-    const _origResetBoard = typeof resetBoard === 'function' ? resetBoard : null;
-    if (_origResetBoard) {
-      window.resetBoard = function (newMaxHp) {
-        lastLocalActionAt = Date.now();
-        _origResetBoard(newMaxHp);
-        postRoomAction({ action: 'reset', maxHp: state.maxHp });
-      };
-    }
+    const _baseResetFn = window.resetBoard;
+    window.resetBoard = function (newMaxHp) {
+      lastLocalActionAt = Date.now();
+      if (typeof _baseResetFn === 'function') {
+        _baseResetFn(newMaxHp);
+      }
+      const targetMaxHp = Number(newMaxHp ?? state.maxHp ?? 10000);
+      state.maxHp = targetMaxHp;
+      state.hp = targetMaxHp;
+      state.paused = false;
+      state.ended = false;
+      if (Array.isArray(state.groups)) {
+        state.groups.forEach(g => {
+          g.damage = 0;
+          g.currentRunner = 1;
+        });
+      }
+      safeRenderBoard();
+      return postRoomAction({ action: 'reset', maxHp: targetMaxHp });
+    };
 
-    const _origAdjustRunner = typeof adjustRunnerCount === 'function' ? adjustRunnerCount : null;
-    if (_origAdjustRunner) {
-      window.adjustRunnerCount = function (groupId, delta) {
-        lastLocalActionAt = Date.now();
-        _origAdjustRunner(groupId, delta);
-        const g = state.groups.find(item => item.id === groupId);
-        if (g) {
-          postRoomAction({
-            action: 'adjustRunnerCount',
-            teamIndex: g.id - 1,
-            runnerCount: g.runnerCount,
-          });
-        }
-      };
-    }
+    const _baseAdjustFn = window.adjustRunnerCount;
+    window.adjustRunnerCount = function (groupId, delta) {
+      lastLocalActionAt = Date.now();
+      if (typeof _baseAdjustFn === 'function') {
+        _baseAdjustFn(groupId, delta);
+      }
+      const g = state.groups.find(item => item.id === groupId);
+      if (g) {
+        postRoomAction({
+          action: 'adjustRunnerCount',
+          teamIndex: g.id - 1,
+          runnerCount: g.runnerCount,
+        });
+      }
+    };
 
     document.addEventListener('focusout', (e) => {
       if (e.target && e.target.tagName === 'SELECT') {
-        setTimeout(syncRoomFromServer, 150);
+        setTimeout(syncRoomFromServer, 200);
       }
     });
 
     syncRoomFromServer();
-    setInterval(syncRoomFromServer, 2500);
-
-    render();
+    setInterval(syncRoomFromServer, 4000);
   </script>
 </body>
 </html>
