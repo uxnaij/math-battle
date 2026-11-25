@@ -20,6 +20,8 @@ interface RoomState {
   ended: boolean;
   teams: TeamState[];
   updatedAt: number;
+  storage?: "upstash" | "memory";
+  redisError?: string;
 }
 
 const globalForStore = globalThis as unknown as {
@@ -61,10 +63,21 @@ function sanitizeRestUrl(raw: string): string {
 }
 
 function getRedisConfig() {
-  const url = sanitizeRestUrl(process.env.UPSTASH_REDIS_REST_URL || "");
-  const token = (process.env.UPSTASH_REDIS_REST_TOKEN || "").trim();
-  if (!url || !token) return null;
-  return { url: url, token: token };
+  const rawUrl = process.env.UPSTASH_REDIS_REST_URL || "";
+  const rawToken = process.env.UPSTASH_REDIS_REST_TOKEN || "";
+  const url = sanitizeRestUrl(rawUrl);
+  const token = rawToken.trim();
+  if (!url || !token) {
+    return {
+      config: null,
+      reason: !rawUrl
+        ? "UPSTASH_REDIS_REST_URL missing"
+        : !url
+        ? "UPSTASH_REDIS_REST_URL invalid"
+        : "UPSTASH_REDIS_REST_TOKEN missing",
+    };
+  }
+  return { config: { url: url, token: token }, reason: "" };
 }
 
 function parseRoomPayload(raw: unknown, room: string): RoomState {
@@ -95,7 +108,7 @@ function parseRoomPayload(raw: unknown, room: string): RoomState {
 
 async function loadRoom(room: string): Promise<RoomState> {
   const key = "math_battle:room:" + room;
-  const redis = getRedisConfig();
+  const { config: redis, reason } = getRedisConfig();
   if (redis) {
     try {
       const res = await fetch(redis.url + "/get/" + encodeURIComponent(key), {
@@ -106,40 +119,74 @@ async function loadRoom(room: string): Promise<RoomState> {
       if (res.ok && text) {
         const data = JSON.parse(text);
         if (data && data.result !== undefined && data.result !== null) {
-          return parseRoomPayload(data.result, room);
+          const loaded = parseRoomPayload(data.result, room);
+          loaded.storage = "upstash";
+          return loaded;
         }
         const initial = createInitialRoom(room);
         await saveRoom(initial);
+        initial.storage = "upstash";
         return initial;
       }
+      const fallback = memoryStore.get(room) || createInitialRoom(room);
+      fallback.storage = "memory";
+      fallback.redisError = "GET status " + res.status + ": " + text.slice(0, 120);
+      return fallback;
     } catch (err) {
-      console.error("Upstash loadRoom error:", err);
+      const fallback = memoryStore.get(room) || createInitialRoom(room);
+      fallback.storage = "memory";
+      fallback.redisError = String(err);
+      return fallback;
     }
   }
   if (!memoryStore.has(room)) {
     memoryStore.set(room, createInitialRoom(room));
   }
-  return memoryStore.get(room) as RoomState;
+  const mem = memoryStore.get(room) as RoomState;
+  mem.storage = "memory";
+  mem.redisError = reason;
+  return mem;
 }
 
 async function saveRoom(state: RoomState): Promise<void> {
   state.updatedAt = Date.now();
   const key = "math_battle:room:" + state.room;
-  const redis = getRedisConfig();
+  const { config: redis, reason } = getRedisConfig();
+  const payloadToStore: RoomState = {
+    room: state.room,
+    hp: state.hp,
+    maxHp: state.maxHp,
+    paused: state.paused,
+    ended: state.ended,
+    teams: state.teams,
+    updatedAt: state.updatedAt,
+  };
   if (redis) {
     try {
-      await fetch(redis.url + "/set/" + encodeURIComponent(key), {
+      const res = await fetch(redis.url + "/set/" + encodeURIComponent(key), {
         method: "POST",
         headers: {
           Authorization: "Bearer " + redis.token,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(JSON.stringify(state)),
+        body: JSON.stringify(JSON.stringify(payloadToStore)),
         cache: "no-store",
       });
+      const text = await res.text();
+      if (res.ok) {
+        state.storage = "upstash";
+        delete state.redisError;
+      } else {
+        state.storage = "memory";
+        state.redisError = "SET status " + res.status + ": " + text.slice(0, 120);
+      }
     } catch (err) {
-      console.error("Upstash saveRoom error:", err);
+      state.storage = "memory";
+      state.redisError = String(err);
     }
+  } else {
+    state.storage = "memory";
+    state.redisError = reason;
   }
   memoryStore.set(state.room, state);
 }
