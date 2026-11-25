@@ -8,6 +8,8 @@ interface TeamState {
   damage: number;
   runner: number;
   runnerCount: number;
+  question?: unknown;
+  eliminatedOptions?: number[];
 }
 
 interface RoomState {
