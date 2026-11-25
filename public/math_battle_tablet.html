@@ -638,7 +638,7 @@
                 </div>
                 <div class="text-right">
                   <span class="font-black text-emerald-300">${(grp.damage || 0).toLocaleString()} 點</span>
-                  <span class="text-xs text-slate-400 ml-2">答對 ${grp.correctCount || 0} 題</span>
+                  <span class="text-xs text-slate-400 ml-2">該組共答對 ${Number(grp.correctCount || 0)} 題</span>
                 </div>
               </div>
             `).join('')}
