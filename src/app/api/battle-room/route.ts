@@ -8,6 +8,7 @@ interface TeamState {
   damage: number;
   runner: number;
   runnerCount: number;
+  combo?: number;
   question?: unknown;
   eliminatedOptions?: number[];
 }
@@ -143,6 +144,7 @@ export async function POST(req: NextRequest) {
     const teamIndex = Number(body.teamIndex ?? 0);
     const team = state.teams[teamIndex];
     if (team && body.question && typeof body.question === "object") {
+      if (typeof body.combo === "number" && !Number.isNaN(body.combo)) { team.combo = Math.max(0, Math.floor(body.combo)); }
       team.question = body.question;
       if (Array.isArray(body.eliminatedOptions)) {
         team.eliminatedOptions = body.eliminatedOptions;
@@ -158,6 +160,7 @@ export async function POST(req: NextRequest) {
       const damage = Math.max(0, Number(body.damage ?? 0));
       const team = state.teams[teamIndex];
       if (team) {
+      if (typeof body.combo === "number" && !Number.isNaN(body.combo)) { team.combo = Math.max(0, Math.floor(body.combo)); }
         team.damage += damage;
         state.hp = Math.max(0, state.hp - damage);
         if (Boolean(body.advanceRunner)) {
