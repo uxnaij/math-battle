@@ -170,6 +170,12 @@ export async function POST(req: NextRequest) {
         if (Array.isArray(body.eliminatedOptions)) {
           team.eliminatedOptions = body.eliminatedOptions;
         }
+        if (body.question && typeof body.question === "object") {
+          team.question = body.question;
+        }
+        if (Array.isArray(body.eliminatedOptions)) {
+          team.eliminatedOptions = body.eliminatedOptions;
+        }
         if (state.hp === 0) {
           state.ended = true;
         }

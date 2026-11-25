@@ -397,6 +397,7 @@
 
         g.question = pickQuestion(activeIds, state.mode);
         if (g && g.question) { g.question.runner = g.currentRunner || 1; syncGroupQuestionToServer(g); }
+        if (g && g.question) { g.question.runner = g.currentRunner || 1; syncGroupQuestionToServer(g); }
         syncGroupQuestionToServer(g);
         render();
       } else {
@@ -816,7 +817,13 @@
         });
         if (res.ok) {
           const data = await res.json();
+          const localQ = grp ? grp.question : null;
           applyServerRoomStateToTablet(data);
+          // 若後端尚未帶回剛抽出的新題目，保留本機最新題目並補同步
+          if (grp && localQ && (!data.teams || !data.teams[groupId - 1] || !data.teams[groupId - 1].question)) {
+            grp.question = localQ;
+            await syncGroupQuestionToServer(grp);
+          }
           if (state.joined && !isTabletControlFocused()) {
             render();
           }
