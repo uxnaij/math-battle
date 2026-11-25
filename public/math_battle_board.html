@@ -83,8 +83,6 @@
 
       if (isLastRunner) {
         g.currentRunner = 1;
-        g.ultimateCount += 1;
-        state.bannerText = `💥 ${g.name}（${g.team}）完成 ${maxRunners} 棒接力！發動合體大招暴擊 -${actualDmg} 傷！`;
       } else {
         g.currentRunner += 1;
         state.bannerText = `⚔️ ${g.name}（${g.team}）推進至第 ${g.currentRunner}/${maxRunners} 棒（造成 ${actualDmg} 傷）！`;
@@ -180,7 +178,7 @@
                   <div class="text-sm text-slate-400 font-bold">總輸出傷害</div>
                 </div>
                 <div class="mt-4 pt-3 border-t border-slate-800 flex flex-col gap-1 text-sm font-bold">
-                                    <div class="text-slate-300">✅ 答對推進：${g.correctCount} 題</div>
+                                    <div class="text-slate-300">✅ 該組共答對 ${Number(g.correctCount || 0)} 題</div>
                 </div>
               </div>
             `).join('')}
@@ -326,7 +324,7 @@
                     <div class="grid grid-cols-1 gap-1.5">
                       <button type="button" onclick="applyManualHit(${g.id}, 240)" ${state.paused ? 'disabled' : ''}
                         class="w-full py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-black text-xs xl:text-sm cursor-pointer transition">
-                        ⚔️ 答對推進（+240）
+                  <div class="text-slate-300">✅ 該組共答對 ${Number(g.correctCount || 0)} 題</div>
                       </button>
                     </div>
                   </div>
