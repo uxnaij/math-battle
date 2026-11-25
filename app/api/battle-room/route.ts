@@ -243,7 +243,11 @@ export async function POST(req: NextRequest) {
     const state = await loadRoom(room);
 
     if (action === "reset") {
+      const requestedMaxHp = Number(body.maxHp);
+      const nextMaxHp = Number.isFinite(requestedMaxHp) && requestedMaxHp >= 1000 ? Math.min(200000, Math.round(requestedMaxHp)) : MAX_HP;
       const fresh = createInitialRoom(room);
+      fresh.maxHp = nextMaxHp;
+      fresh.hp = nextMaxHp;
       await saveRoom(fresh);
       return NextResponse.json(fresh);
     }

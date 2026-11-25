@@ -365,6 +365,17 @@
       }
     }
     const ROOM_ID = (new URLSearchParams(window.location.search).get('room') || '506').trim() || '506';
+    let lastLocalActionAt = 0;
+
+    function isUserInteractingWithSelect() {
+      const active = document.activeElement;
+      return Boolean(active && active.tagName === 'SELECT');
+    }
+
+    function safeRenderBoard() {
+      if (isUserInteractingWithSelect()) return;
+      render();
+    }
 
     const _origGetTabletUrl = typeof getTabletUrl === 'function' ? getTabletUrl : null;
     function getTabletUrl() {
@@ -392,20 +403,24 @@
     }
 
     async function syncRoomFromServer() {
+      if (Date.now() - lastLocalActionAt < 1200) return;
+      if (isUserInteractingWithSelect()) return;
       try {
         const res = await fetch('/api/battle-room?room=' + encodeURIComponent(ROOM_ID), {
           cache: 'no-store',
         });
         if (!res.ok) return;
         const data = await res.json();
+        if (Date.now() - lastLocalActionAt < 1200) return;
         applyServerRoomState(data);
-        render();
+        safeRenderBoard();
       } catch (err) {
         console.error('Board sync error:', err);
       }
     }
 
     async function postRoomAction(payload) {
+      lastLocalActionAt = Date.now();
       try {
         const res = await fetch('/api/battle-room', {
           method: 'POST',
@@ -415,7 +430,7 @@
         if (res.ok) {
           const data = await res.json();
           applyServerRoomState(data);
-          render();
+          safeRenderBoard();
         }
       } catch (err) {
         console.error('Board action sync error:', err);
@@ -425,14 +440,16 @@
     const _origResetBoard = typeof resetBoard === 'function' ? resetBoard : null;
     if (_origResetBoard) {
       window.resetBoard = function (newMaxHp) {
+        lastLocalActionAt = Date.now();
         _origResetBoard(newMaxHp);
-        postRoomAction({ action: 'reset' });
+        postRoomAction({ action: 'reset', maxHp: state.maxHp });
       };
     }
 
     const _origAdjustRunner = typeof adjustRunnerCount === 'function' ? adjustRunnerCount : null;
     if (_origAdjustRunner) {
       window.adjustRunnerCount = function (groupId, delta) {
+        lastLocalActionAt = Date.now();
         _origAdjustRunner(groupId, delta);
         const g = state.groups.find(item => item.id === groupId);
         if (g) {
@@ -445,9 +462,14 @@
       };
     }
 
-    syncRoomFromServer();
-    setInterval(syncRoomFromServer, 2000);
+    document.addEventListener('focusout', (e) => {
+      if (e.target && e.target.tagName === 'SELECT') {
+        setTimeout(syncRoomFromServer, 150);
+      }
+    });
 
+    syncRoomFromServer();
+    setInterval(syncRoomFromServer, 2500);
 
     render();
   </script>

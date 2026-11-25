@@ -830,7 +830,13 @@
     }, 500);
 
     render();
-      const ROOM_ID = (new URLSearchParams(window.location.search).get('room') || '506').trim() || '506';
+    const ROOM_ID = (new URLSearchParams(window.location.search).get('room') || '506').trim() || '506';
+
+    function isTabletControlFocused() {
+      const active = document.activeElement;
+      if (!active) return false;
+      return active.tagName === 'SELECT' || active.tagName === 'INPUT' || active.tagName === 'TEXTAREA';
+    }
 
     function applyServerRoomStateToTablet(data) {
       if (!data || !Array.isArray(data.teams)) return;
@@ -854,6 +860,7 @@
     }
 
     async function syncTabletRoom() {
+      if (isTabletControlFocused()) return;
       try {
         const res = await fetch('/api/battle-room?room=' + encodeURIComponent(ROOM_ID), {
           cache: 'no-store',
@@ -861,7 +868,9 @@
         if (!res.ok) return;
         const data = await res.json();
         applyServerRoomStateToTablet(data);
-        render();
+        if (!isTabletControlFocused()) {
+          render();
+        }
       } catch (err) {
         console.error('Tablet sync error:', err);
       }
@@ -883,7 +892,9 @@
         if (res.ok) {
           const data = await res.json();
           applyServerRoomStateToTablet(data);
-          render();
+          if (!isTabletControlFocused()) {
+            render();
+          }
         }
       } catch (err) {
         console.error('Tablet hit sync error:', err);
@@ -909,7 +920,7 @@
     }
 
     syncTabletRoom();
-    setInterval(syncTabletRoom, 2000);
-</script>
+    setInterval(syncTabletRoom, 2500);
+  </script>
 </body>
 </html>
