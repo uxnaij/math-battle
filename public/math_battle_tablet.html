@@ -541,6 +541,95 @@
         </div>
       `;
     }
+    function renderTabletBattle() {
+      const g = state.groups.find(item => item.id === state.selectedGroupId) || state.groups[0];
+      const now = Date.now();
+      const isFrozen = (g.freezeUntil || 0) > now;
+      const myRunner = state.myRunnerNo || 1;
+      const curRunner = g.currentRunner || 1;
+      const isMyTurnRunner = myRunner === curRunner;
+      const eliminatedList = Array.isArray(g.eliminatedOptions) ? g.eliminatedOptions : [];
+      const optionsList = (g.question && Array.isArray(g.question.shuffledOptions))
+        ? g.question.shuffledOptions
+        : ((g.question && Array.isArray(g.question.options)) ? g.question.options : []);
+
+      let statusBanner = '';
+      if (!state.started) {
+        statusBanner = `
+          <div class="mb-4 px-4 py-3 rounded-2xl bg-amber-500/20 border border-amber-400/50 text-amber-200 text-sm font-black text-center">
+            ⏳ 尚未開始：請等大屏按下「開始對戰」後再作答（你是第 ${myRunner} 棒）
+          </div>
+        `;
+      } else if (!isMyTurnRunner) {
+        statusBanner = `
+          <div class="mb-4 px-4 py-3 rounded-2xl bg-sky-500/20 border border-sky-400/50 text-sky-200 text-sm font-black text-center">
+            👀 只能看題：你是第 ${myRunner} 棒，目前由「第 ${curRunner} 棒」作答
+          </div>
+        `;
+      } else {
+        statusBanner = `
+          <div class="mb-4 px-4 py-2 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 text-xs font-black text-center">
+            ⚔️ 輪到你作答：你是第 ${myRunner} 棒
+          </div>
+        `;
+      }
+
+      return `
+        <div class="max-w-4xl w-full mx-auto flex-1 flex flex-col justify-between gap-4">
+          <div class="bg-slate-900/95 border-2 ${g.border || 'border-slate-700'} rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-xl">
+            <div class="flex items-center gap-3">
+              <span class="px-3 py-1 rounded-xl ${g.badgeBg || 'bg-indigo-600'} text-white font-black text-base md:text-lg">
+                ${g.name} · ${g.team}
+              </span>
+              <div>
+                <div class="text-xs text-slate-300 font-bold">
+                  ${state.playerLabel ? `選手：${state.playerLabel} · ` : ''}第 ${myRunner} 棒（目前第 ${curRunner} 棒）
+                </div>
+                <div class="text-xl md:text-2xl font-black text-rose-400">
+                  ⚔️ 本組輸出：${Number(g.damage || 0).toLocaleString()} 點
+                </div>
+              </div>
+            </div>
+            <button type="button" onclick="finishBattleNow();"
+              class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs md:text-sm font-black cursor-pointer">
+              📊 結算戰績
+            </button>
+          </div>
+
+          <div class="bg-slate-900/95 border border-slate-700/80 rounded-3xl p-5 md:p-7 flex-1 flex flex-col justify-between shadow-2xl">
+            <div class="mb-6">
+              <div class="text-xs font-black text-amber-300 uppercase tracking-wider mb-2">
+                ${g.question && g.question.category ? g.question.category : '計算題'}
+              </div>
+              <div class="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-relaxed break-words">
+                ${g.question && g.question.text ? g.question.text : '等待題目載入中...'}
+              </div>
+            </div>
+
+            ${statusBanner}
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+              ${optionsList.map((opt, idx) => {
+                const letter = ['A', 'B', 'C', 'D'][idx] || String(idx + 1);
+                const isEliminated = eliminatedList.includes(opt);
+                const isOptionDisabled = Boolean(!state.started || isEliminated || isFrozen || state.paused || !isMyTurnRunner);
+                return `
+                  <button type="button" onclick="handleTabletAnswer(${opt})" ${isOptionDisabled ? 'disabled' : ''}
+                    class="w-full flex items-center justify-between px-4 py-4 md:py-5 rounded-2xl border-2 font-black transition ${
+                      isOptionDisabled
+                        ? 'bg-slate-900/50 border-slate-800 text-slate-500 opacity-50 cursor-not-allowed'
+                        : `bg-slate-800/95 border-slate-600 text-white ${g.btnHover || 'hover:border-amber-400'} active:scale-[0.98] cursor-pointer`
+                    }">
+                    <span class="text-base md:text-lg px-2.5 py-1 rounded-lg bg-slate-950/80 text-slate-300 mr-3 shrink-0">${letter}</span>
+                    <span class="text-3xl sm:text-4xl md:text-5xl flex-1 text-center leading-none">${opt}</span>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
     function render() {
       const root = document.getElementById('app');
       if (state.ended) {
