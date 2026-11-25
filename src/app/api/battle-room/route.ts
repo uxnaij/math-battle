@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const TEAM_NAMES = ["烈焰隊", "疾風隊", "森靈隊", "雷光隊", "幻紫隊"];
 const MAX_HP = 10000;
@@ -14,6 +14,7 @@ interface RoomState {
   room: string;
   hp: number;
   maxHp: number;
+  started: boolean;
   paused: boolean;
   ended: boolean;
   teams: TeamState[];
@@ -32,6 +33,7 @@ function createInitialRoom(room: string): RoomState {
     room,
     hp: MAX_HP,
     maxHp: MAX_HP,
+    started: false,
     paused: false,
     ended: false,
     teams: TEAM_NAMES.map((name) => ({
