@@ -176,7 +176,7 @@
     ];
 
     const STAR_BASE_DAMAGE = { 1: 120, 2: 240, 3: 380 };
-    const ULTIMATE_BONUS_DAMAGE = 1000;
+    const 0 = 1000;
 
     let audioCtx = null;
     function playTone(type) {
@@ -358,9 +358,7 @@
         const { mult } = getSpeedMultiplier(g.question.startedAt);
         const comboBonus = 1 + Math.min(g.combo, 5) * 0.05;
         const baseHit = Math.round(STAR_BASE_DAMAGE[g.question.stars] * mult * comboBonus);
-        const completedFullLap = runnerNo >= TEAM_SIZE;
-        const bonusDmg = completedFullLap ? ULTIMATE_BONUS_DAMAGE : 0;
-        const actualDmg = Math.min(state.hp, baseHit + bonusDmg);
+        const actualDmg = Math.min(state.hp, baseHit);
 
         g.damage += actualDmg;
         g.combo += 1;
@@ -371,14 +369,7 @@
         g.eliminatedOptions = [];
         state.hp = Math.max(0, state.hp - actualDmg);
 
-        if (completedFullLap) {
-          g.currentRunner = 1;
-          g.ultimateCount += 1;
-          state.lastFeedback = { ok: true, text: `💥 6 棒接力完成！合體大招造成 ${actualDmg} 點傷害！` };
-          state.bannerText = `💥 ${g.name}第 6 棒壓軸命中！發動合體大招 -${actualDmg} 傷！請換第 1 棒！`;
-          playTone('ultimate');
-          state.ultimateAlert = `🔥 ${g.name}（${g.team}）6 棒接力完成！-${actualDmg} 傷！`;
-          setTimeout(() => { state.ultimateAlert = null; render(); }, 1800);
+        if (false) {
         } else {
           g.currentRunner = runnerNo + 1;
           state.lastFeedback = { ok: true, text: `⚔️ 答對了！幫${g.name}造成 ${actualDmg} 點傷害，交棒第 ${g.currentRunner} 棒！` };
@@ -565,6 +556,27 @@
         ? g.question.shuffledOptions
         : ((g.question && Array.isArray(g.question.options)) ? g.question.options : []);
 
+      const stars = Math.max(1, Math.min(5, Number((g.question && g.question.stars) || 1)));
+      const starIcons = '★'.repeat(stars) + '☆'.repeat(5 - stars);
+      const baseScore = Number((typeof STAR_BASE_DAMAGE === 'object' && STAR_BASE_DAMAGE[stars]) ? STAR_BASE_DAMAGE[stars] : stars * 100);
+
+      const groupCombo = Number(g.combo || 0);
+      const comboMult = 1 + Math.min(groupCombo, 5) * 0.05;
+
+      const elapsedSec = (g.question && g.question.startedAt)
+        ? Math.max(0, (now - Number(g.question.startedAt)) / 1000)
+        : 0;
+      const speedInfo = (typeof getSpeedMultiplier === 'function' && g.question && g.question.startedAt)
+        ? getSpeedMultiplier(g.question.startedAt)
+        : { mult: 1, label: '標準作答' };
+      const speedMult = Number(speedInfo && speedInfo.mult ? speedInfo.mult : 1);
+      const speedLabel = (speedInfo && speedInfo.label) ? speedInfo.label : (speedMult > 1 ? '神速作答' : '穩定作答');
+
+      // 神速加分視窗以 15 秒為滿條參考，隨經過秒數遞減
+      const maxSpeedWindowSec = 15;
+      const speedBarPct = Math.max(8, Math.min(100, Math.round(((maxSpeedWindowSec - Math.min(maxSpeedWindowSec, elapsedSec)) / maxSpeedWindowSec) * 100)));
+      const estimatedDmg = Math.round(baseScore * speedMult * comboMult);
+
       let statusBanner = '';
       if (!state.started) {
         statusBanner = `
@@ -585,27 +597,27 @@
           </div>
         `;
       }
-      const curCombo = Number(g.combo || 0);
-      const comboMult = 1 + Math.min(curCombo, 5) * 0.05;
-      const speedInfo = (typeof getSpeedMultiplier === 'function' && g.question && g.question.startedAt)
-        ? getSpeedMultiplier(g.question.startedAt)
-        : { mult: 1, label: '標準作答' };
-      const speedMult = Number(speedInfo && speedInfo.mult ? speedInfo.mult : 1);
-      const speedLabel = (speedInfo && speedInfo.label) ? speedInfo.label : (speedMult > 1 ? '神速作答' : '穩定作答');
-      const totalBonusPct = Math.round((comboMult * speedMult - 1) * 100);
-      const streakAndSpeedBar = `
-        <div class="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-          <div class="px-3.5 py-2.5 rounded-2xl bg-amber-500/15 border border-amber-400/40 flex items-center justify-between">
-            <span class="text-xs font-black text-amber-200">🔥 連續答對</span>
-            <span class="text-sm font-black text-amber-300">${curCombo} 連擊（×${comboMult.toFixed(2)}）</span>
+
+      const bonusAndSpeedPanel = `
+        <div class="mb-4 space-y-2.5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div class="px-3.5 py-2.5 rounded-2xl bg-amber-500/15 border border-amber-400/40 flex items-center justify-between">
+              <span class="text-xs font-black text-amber-200">🔥 小組連擊</span>
+              <span class="text-sm font-black text-amber-300">${groupCombo} 連擊（×${comboMult.toFixed(2)}）</span>
+            </div>
+            <div class="px-3.5 py-2.5 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 flex items-center justify-between">
+              <span class="text-xs font-black text-emerald-200">🎯 預估本題得分</span>
+              <span class="text-sm font-black text-emerald-300">約 ${estimatedDmg.toLocaleString()} 分</span>
+            </div>
           </div>
-          <div class="px-3.5 py-2.5 rounded-2xl ${speedMult > 1 ? 'bg-cyan-500/15 border-cyan-400/45' : 'bg-slate-800/80 border-slate-700'} border flex items-center justify-between">
-            <span class="text-xs font-black ${speedMult > 1 ? 'text-cyan-200' : 'text-slate-300'}">⚡ ${speedLabel}</span>
-            <span class="text-sm font-black ${speedMult > 1 ? 'text-cyan-300' : 'text-slate-200'}">神速 ×${speedMult.toFixed(2)}</span>
-          </div>
-          <div class="px-3.5 py-2.5 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 flex items-center justify-between">
-            <span class="text-xs font-black text-emerald-200">✨ 預估加分加成</span>
-            <span class="text-sm font-black text-emerald-300">${totalBonusPct >= 0 ? `+${totalBonusPct}%` : `${totalBonusPct}%`}</span>
+          <div class="px-3.5 py-2.5 rounded-2xl bg-slate-800/85 border border-slate-700">
+            <div class="flex items-center justify-between text-xs font-black mb-1.5">
+              <span class="${speedMult > 1 ? 'text-cyan-300' : 'text-slate-300'}">⚡ ${speedLabel}（神速 ×${speedMult.toFixed(2)}）</span>
+              <span class="text-slate-400">已過 ${elapsedSec.toFixed(1)} 秒</span>
+            </div>
+            <div class="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-700/80">
+              <div style="width: ${speedBarPct}%" class="h-full transition-all duration-300 ${speedMult > 1 ? 'bg-gradient-to-r from-cyan-400 via-sky-400 to-emerald-400' : 'bg-slate-500'}"></div>
+            </div>
           </div>
         </div>
       `;
@@ -633,16 +645,26 @@
           </div>
 
           <div class="bg-slate-900/95 border border-slate-700/80 rounded-3xl p-5 md:p-7 flex-1 flex flex-col justify-between shadow-2xl">
-            <div class="mb-6">
-              <div class="text-xs font-black text-amber-300 uppercase tracking-wider mb-2">
-                ${g.question && g.question.category ? g.question.category : '計算題'}
+            <div class="mb-5">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <span class="text-xs font-black text-amber-300 uppercase tracking-wider">
+                  ${g.question && g.question.category ? g.question.category : '計算題'}
+                </span>
+                <div class="flex items-center gap-2">
+                  <span class="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-200 text-xs font-black">
+                    難度 ${starIcons}（${stars} 星）
+                  </span>
+                  <span class="px-2.5 py-1 rounded-lg bg-rose-500/20 border border-rose-400/40 text-rose-200 text-xs font-black">
+                    基礎 ${baseScore} 分
+                  </span>
+                </div>
               </div>
               <div class="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-relaxed break-words">
                 ${g.question && g.question.text ? g.question.text : '等待題目載入中...'}
               </div>
             </div>
 
-            ${streakAndSpeedBar}
+            ${bonusAndSpeedPanel}
             ${statusBanner}
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
@@ -730,6 +752,8 @@
         state.myRunnerNo,
         g ? g.currentRunner : 0,
         g ? g.damage : 0,
+        g ? (g.combo || 0) : 0,
+        g && g.question && g.question.startedAt ? Math.floor((Date.now() - g.question.startedAt) / 1000) : 0,
         g && g.question ? (g.question.id || g.question.text) : '',
         (g && g.eliminatedOptions) ? g.eliminatedOptions.join(',') : '',
         state.ultimateAlert || ''
@@ -768,7 +792,7 @@
           action: 'syncQuestion',
           teamIndex: grp.id - 1,
           question: payloadQuestion,
-          eliminatedOptions: grp.eliminatedOptions || [],
+          eliminatedOptions: grp.eliminatedOptions || [], combo: Number(grp.combo || 0),
         }),
       }).catch(() => {});
     }
@@ -790,6 +814,7 @@
         const g = state.groups[idx];
         if (!g) return;
         g.damage = Number(t.damage ?? g.damage ?? 0);
+        if (t.combo !== undefined && t.combo !== null) { g.combo = Number(t.combo || 0); }
         g.runnerCount = 6;
         const serverRunner = Number(t.runner ?? 1);
         if (serverRunner >= 1 && serverRunner <= 6) {
@@ -835,7 +860,7 @@
             teamIndex: groupId - 1,
             damage: damage,
             advanceRunner: Boolean(advanceRunner),
-            runnerCount: 6,
+            runnerCount: 6, combo: grp ? Number(grp.combo || 0) : 0,
             question: grp ? grp.question : null,
             eliminatedOptions: grp ? (grp.eliminatedOptions || []) : [],
           }),
