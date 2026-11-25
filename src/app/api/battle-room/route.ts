@@ -161,7 +161,8 @@ export async function POST(req: NextRequest) {
         team.damage += damage;
         state.hp = Math.max(0, state.hp - damage);
         if (Boolean(body.advanceRunner)) {
-          team.runner = team.runner < team.runnerCount ? team.runner + 1 : 1;
+          team.runnerCount = 6;
+          team.runner = team.runner < 6 ? team.runner + 1 : 1;
         }
         if (state.hp === 0) {
           state.ended = true;

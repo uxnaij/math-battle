@@ -325,7 +325,14 @@
 
     function enterTabletBattle(groupId, runnerNo, labelText) {
       const g = state.groups.find(item => item.id === groupId);
-      if (g) g.currentRunner = runnerNo;
+      const pickedRunner = Math.min(6, Math.max(1, Number(runnerNo || state.myRunnerNo || 1)));
+      state.myRunnerNo = pickedRunner;
+      if (g) {
+        g.runnerCount = 6;
+        if (!g.currentRunner || g.currentRunner < 1 || g.currentRunner > 6) {
+          g.currentRunner = 1;
+        }
+      }
       state.selectedGroupId = groupId;
       state.playerLabel = (labelText || '').trim();
       state.joined = true;
