@@ -482,6 +482,42 @@
 
     syncRoomFromServer();
     setInterval(syncRoomFromServer, 4000);
+  
+    window.resetBoard = function (newMaxHp) {
+      lastLocalActionAt = Date.now();
+      const targetMaxHp = Number(newMaxHp ?? state.maxHp ?? 10000);
+      state.maxHp = targetMaxHp;
+      state.hp = targetMaxHp;
+      state.paused = false;
+      state.ended = false;
+      if (Array.isArray(state.groups)) {
+        state.groups.forEach(function (g) {
+          g.damage = 0;
+          g.currentRunner = 1;
+        });
+      }
+      safeRenderBoard();
+      fetch('/api/battle-room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({
+          room: ROOM_ID,
+          action: 'reset',
+          maxHp: targetMaxHp,
+        }),
+      })
+        .then(function (res) { return res.ok ? res.json() : null; })
+        .then(function (data) {
+          if (data && Array.isArray(data.teams)) {
+            applyServerRoomState(data);
+            safeRenderBoard();
+          }
+        })
+        .catch(function (err) {
+          console.error('Reset sync error:', err);
+        });
+    };
   </script>
 </body>
 </html>
