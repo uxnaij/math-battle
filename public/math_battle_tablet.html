@@ -852,6 +852,12 @@
       const root = document.getElementById('app');
       if (state.ended) {
         root.innerHTML = renderSummary();
+      } else if (!state.joined) {
+        root.innerHTML = renderJoinScreen();
+      } else {
+        root.innerHTML = renderTabletBattle();
+      }
+
       let overlay = document.getElementById('battle-waiting-overlay');
       const shouldShowWait = Boolean(state.joined && !state.ended && !state.started);
       if (shouldShowWait) {
@@ -879,13 +885,7 @@
       } else if (overlay) {
         overlay.remove();
       }
-      } else if (!state.joined) {
-        root.innerHTML = renderJoinScreen();
-      } else {
-        root.innerHTML = renderTabletBattle();
-      }
     }
-
     setInterval(() => {
       if (state.joined && !state.ended && !state.paused) {
         render();
