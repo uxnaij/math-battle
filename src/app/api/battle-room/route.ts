@@ -137,6 +137,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(state);
   }
 
+  if (action === "syncQuestion") {
+    const teamIndex = Number(body.teamIndex ?? 0);
+    const team = state.teams[teamIndex];
+    if (team && body.question && typeof body.question === "object") {
+      team.question = body.question;
+      if (Array.isArray(body.eliminatedOptions)) {
+        team.eliminatedOptions = body.eliminatedOptions;
+      }
+      await saveRoom(state);
+    }
+    return NextResponse.json(state);
+  }
+
   if (action === "hit") {
     if (!state.paused && !state.ended) {
       const teamIndex = Number(body.teamIndex ?? 0);
