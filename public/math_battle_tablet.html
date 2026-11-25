@@ -396,6 +396,7 @@
         }
 
         g.question = pickQuestion(activeIds, state.mode);
+        syncGroupQuestionToServer(g);
         render();
       } else {
         g.combo = 0;
@@ -771,8 +772,7 @@
             startedAt: sameId && g.question.startedAt ? g.question.startedAt : (t.question.startedAt || Date.now()),
           };
           g.eliminatedOptions = Array.isArray(t.eliminatedOptions) ? t.eliminatedOptions : [];
-        } else if (state.started && g.question) {
-          // 若伺服器該組尚無題目但本機已有題目，立刻補同步給同組其他棒次
+        } else if (state.started && g.question && (state.myRunnerNo || 1) === (g.currentRunner || 1)) {
           syncGroupQuestionToServer(g);
         }
       });
