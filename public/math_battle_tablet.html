@@ -708,6 +708,14 @@
       return active.tagName === 'SELECT' || active.tagName === 'INPUT' || active.tagName === 'TEXTAREA';
     }
 
+        const ROOM_CODE = (() => {
+      try {
+        const sp = new URLSearchParams(window.location.search);
+        return (sp.get('room') || (window.state && window.state.room) || '506').trim();
+      } catch (_) {
+        return '506';
+      }
+    })();
     function syncGroupQuestionToServer(grp) {
       if (!grp || !grp.question) return Promise.resolve();
       const payloadQuestion = Object.assign({}, grp.question, {
