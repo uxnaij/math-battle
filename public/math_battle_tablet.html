@@ -396,6 +396,7 @@
         }
 
         g.question = pickQuestion(activeIds, state.mode);
+        if (g && g.question) { g.question.runner = g.currentRunner || 1; syncGroupQuestionToServer(g); }
         syncGroupQuestionToServer(g);
         render();
       } else {
@@ -730,6 +731,9 @@
 
     function syncGroupQuestionToServer(grp) {
       if (!grp || !grp.question) return Promise.resolve();
+      const payloadQuestion = Object.assign({}, grp.question, {
+        runner: grp.currentRunner || 1,
+      });
       return fetch('/api/battle-room', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -737,7 +741,7 @@
           room: ROOM_ID,
           action: 'syncQuestion',
           teamIndex: grp.id - 1,
-          question: grp.question,
+          question: payloadQuestion,
           eliminatedOptions: grp.eliminatedOptions || [],
         }),
       }).catch(() => {});
@@ -766,11 +770,10 @@
           g.currentRunner = serverRunner;
         }
         if (t.question && typeof t.question === 'object' && t.question.text) {
-          const sameId = g.question && g.question.id === t.question.id && g.question.text === t.question.text;
-          g.question = {
-            ...t.question,
-            startedAt: sameId && g.question.startedAt ? g.question.startedAt : (t.question.startedAt || Date.now()),
-          };
+          const sameQ = g.question && g.question.id === t.question.id && g.question.text === t.question.text;
+          g.question = Object.assign({}, t.question, {
+            startedAt: sameQ && g.question.startedAt ? g.question.startedAt : (t.question.startedAt || Date.now()),
+          });
           g.eliminatedOptions = Array.isArray(t.eliminatedOptions) ? t.eliminatedOptions : [];
         } else if (state.started && g.question && (state.myRunnerNo || 1) === (g.currentRunner || 1)) {
           syncGroupQuestionToServer(g);
