@@ -798,7 +798,9 @@
               </div>
             </div>
 
-                        ${!state.started ? `
+                        const isMyTurnRunner = (state.myRunnerNo || 1) === g.currentRunner;
+            const isOptionDisabled = Boolean(!state.started || isEliminated || isFrozen || state.paused || !isMyTurnRunner);
+            ${!state.started ? `
               <div class="mb-4 px-4 py-3 rounded-2xl bg-amber-500/20 border border-amber-400/50 text-amber-200 text-sm font-black text-center">
                 ⏳ 尚未開始：請等大屏按下「開始對戰」後再作答（目前僅可看題）
               </div>
