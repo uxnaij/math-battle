@@ -639,6 +639,45 @@
         </div>
       `;
     }
+        function renderSummary() {
+      const sorted = [...state.groups].sort((a, b) => (b.damage || 0) - (a.damage || 0));
+      const champion = sorted[0] || state.groups[0];
+      const totalDmg = state.groups.reduce((acc, item) => acc + (item.damage || 0), 0);
+      return `
+        <div class="max-w-3xl w-full mx-auto my-auto bg-slate-900/95 border border-amber-400/50 rounded-3xl p-6 md:p-8 shadow-2xl text-white">
+          <div class="text-xs font-black tracking-widest text-amber-300 uppercase mb-1">BATTLE SUMMARY</div>
+          <h1 class="text-2xl md:text-3xl font-black mb-2">🏆 怪物已被擊倒！對戰結算</h1>
+          <p class="text-sm text-slate-300 mb-6">
+            最高輸出隊伍：<span class="text-amber-300 font-black">${champion ? `${champion.name}（${champion.team}）` : '無'}</span> · 總傷害：<span class="text-emerald-300 font-black">${totalDmg.toLocaleString()}</span> 點
+          </p>
+          <div class="space-y-2.5 mb-6">
+            ${sorted.map((grp, idx) => `
+              <div class="flex items-center justify-between px-4 py-3 rounded-2xl border ${idx === 0 ? 'bg-amber-500/15 border-amber-400/60' : 'bg-slate-800/80 border-slate-700'}">
+                <div class="font-black">
+                  <span class="text-amber-300 mr-2">#${idx + 1}</span>
+                  <span>${grp.name}（${grp.team}）</span>
+                </div>
+                <div class="text-right">
+                  <span class="font-black text-emerald-300">${(grp.damage || 0).toLocaleString()} 點</span>
+                  <span class="text-xs text-slate-400 ml-2">答對 ${grp.correctCount || 0} 題</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <button type="button" onclick="state.showSummary = false; render();"
+              class="flex-1 py-3.5 px-5 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-black transition cursor-pointer">
+              查看對戰畫面
+            </button>
+            <button type="button" onclick="resetTabletBattle(); render();"
+              class="flex-1 py-3.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black transition cursor-pointer">
+              重新準備挑戰
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
     function render() {
       const root = document.getElementById('app');
       if (state.ended) {
@@ -650,11 +689,34 @@
       }
     }
 
-    setInterval(() => {
-      if (state.joined && !state.ended && !state.paused) {
+    let lastRenderSig = '';
+    function renderIfChanged() {
+      const g = state.groups.find(item => item.id === state.selectedGroupId) || state.groups[0];
+      const sig = [
+        state.joined ? 1 : 0,
+        state.started ? 1 : 0,
+        state.paused ? 1 : 0,
+        state.ended ? 1 : 0,
+        state.showSummary ? 1 : 0,
+        state.hp,
+        state.myRunnerNo,
+        g ? g.currentRunner : 0,
+        g ? g.damage : 0,
+        g && g.question ? (g.question.id || g.question.text) : '',
+        (g && g.eliminatedOptions) ? g.eliminatedOptions.join(',') : '',
+        state.ultimateAlert || ''
+      ].join('|');
+      if (sig !== lastRenderSig) {
+        lastRenderSig = sig;
         render();
       }
-    }, 500);
+    }
+
+    setInterval(() => {
+      if (state.joined && !state.ended && !state.paused && !isTabletControlFocused()) {
+        renderIfChanged();
+      }
+    }, 800);
 
     render();
     const ROOM_ID = (new URLSearchParams(window.location.search).get('room') || '506').trim() || '506';
