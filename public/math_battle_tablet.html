@@ -748,7 +748,7 @@
       }
       state.started = Boolean(data.started);
       state.ended = Boolean(data.ended);
-      if (keepJoined && !state.ended) { state.joined = true; }
+      if (keepJoined) { state.joined = true; }
       data.teams.forEach((t, idx) => {
         const g = state.groups[idx];
         if (!g) return;
