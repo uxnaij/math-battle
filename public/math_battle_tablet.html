@@ -24,11 +24,11 @@
     })();
 
     const defaultGroups = [
-      { id: 1, name: "第一組", team: "烈焰小隊", damage: 0, correctCount: 0, combo: 0, runnerCount: 6, currentRunner: 1, border: "border-rose-500/60", badgeBg: "bg-rose-600", btnHover: "hover:border-rose-400", question: null, eliminatedOptions: [] },
-      { id: 2, name: "第二組", team: "疾風小隊", damage: 0, correctCount: 0, combo: 0, runnerCount: 6, currentRunner: 1, border: "border-sky-500/60", badgeBg: "bg-sky-600", btnHover: "hover:border-sky-400", question: null, eliminatedOptions: [] },
-      { id: 3, name: "第三組", team: "雷霆小隊", damage: 0, correctCount: 0, combo: 0, runnerCount: 6, currentRunner: 1, border: "border-amber-500/60", badgeBg: "bg-amber-600", btnHover: "hover:border-amber-400", question: null, eliminatedOptions: [] },
-      { id: 4, name: "第四組", team: "翡翠小隊", damage: 0, correctCount: 0, combo: 0, runnerCount: 6, currentRunner: 1, border: "border-emerald-500/60", badgeBg: "bg-emerald-600", btnHover: "hover:border-emerald-400", question: null, eliminatedOptions: [] },
-      { id: 5, name: "第五組", team: "星耀小隊", damage: 0, correctCount: 0, combo: 0, runnerCount: 6, currentRunner: 1, border: "border-violet-500/60", badgeBg: "bg-violet-600", btnHover: "hover:border-violet-400", question: null, eliminatedOptions: [] }
+      { id: 1, name: "第一組", team: "烈焰小隊", damage: 0, correctCount: 0, combo: 0, runnerCount: 6, currentRunner: 1, border: "border-rose-500/60", badgeBg: "bg-rose-600", btnHover: "hover:border-rose-400", question: null, eliminatedOptions: [], wrongAnswers: [] },
+      { id: 2, name: "第二組", team: "疾風小隊", damage: 0, correctCount: 0, combo: 0, runnerCount: 6, currentRunner: 1, border: "border-sky-500/60", badgeBg: "bg-sky-600", btnHover: "hover:border-sky-400", question: null, eliminatedOptions: [], wrongAnswers: [] },
+      { id: 3, name: "第三組", team: "雷霆小隊", damage: 0, correctCount: 0, combo: 0, runnerCount: 6, currentRunner: 1, border: "border-amber-500/60", badgeBg: "bg-amber-600", btnHover: "hover:border-amber-400", question: null, eliminatedOptions: [], wrongAnswers: [] },
+      { id: 4, name: "第四組", team: "翡翠小隊", damage: 0, correctCount: 0, combo: 0, runnerCount: 6, currentRunner: 1, border: "border-emerald-500/60", badgeBg: "bg-emerald-600", btnHover: "hover:border-emerald-400", question: null, eliminatedOptions: [], wrongAnswers: [] },
+      { id: 5, name: "第五組", team: "星耀小隊", damage: 0, correctCount: 0, combo: 0, runnerCount: 6, currentRunner: 1, border: "border-violet-500/60", badgeBg: "bg-violet-600", btnHover: "hover:border-violet-400", question: null, eliminatedOptions: [], wrongAnswers: [] }
     ];
 
     window.BATTLE_QUESTIONS = [
@@ -170,7 +170,7 @@
       hp: 10000,
       feedbackMsg: "",
       feedbackOk: null,
-      groups: defaultGroups.map(g => Object.assign({}, g, { eliminatedOptions: [] }))
+      groups: defaultGroups.map(g => Object.assign({}, g, { eliminatedOptions: [], wrongAnswers: [] }))
     };
 
     function pickNextQuestion(grp) {
@@ -287,7 +287,7 @@
             runnerCount: 6,
             combo: grp ? Number(grp.combo || 0) : 0,
             question: grp ? grp.question : null,
-            eliminatedOptions: grp ? (grp.eliminatedOptions || []) : []
+            eliminatedOptions: grp ? (grp.eliminatedOptions || []) : [], wrongAnswers: grp ? (grp.wrongAnswers || []) : []
           })
         });
         if (res.ok) {
@@ -311,6 +311,7 @@
       }
     }
 
+    function recordTabletWrongAnswer(grp, chosenVal) { if (!grp || !grp.question) return; if (!Array.isArray(grp.wrongAnswers)) grp.wrongAnswers = []; grp.wrongAnswers.push({ id: grp.question.id || '', category: grp.question.category || '', text: grp.question.text || '', chosen: chosenVal, answer: grp.question.answer, hint: grp.question.hint || '', at: Date.now() }); fetch('/api/battle-room', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: ROOM_ID, action: 'syncQuestion', teamIndex: grp.id - 1, question: grp.question, eliminatedOptions: grp.eliminatedOptions || [], combo: Number(grp.combo || 0), wrongAnswers: grp.wrongAnswers }) }).catch(() => {}); }
     function handleTabletAnswer(chosenValue) {
       if (!state.started || state.paused || state.ended || !state.joined || state.submittingAnswer) return;
       const g = state.groups.find(item => item.id === state.selectedGroupId);
@@ -343,6 +344,7 @@
         if (!Array.isArray(g.eliminatedOptions)) g.eliminatedOptions = [];
         if (!g.eliminatedOptions.includes(chosenValue)) {
           g.eliminatedOptions.push(chosenValue);
+        recordTabletWrongAnswer(g, chosenValue);
         }
         state.feedbackOk = false;
         state.feedbackMsg = `再算一次！維持第 ${prevRunner} 棒作答（答對一題換一棒）`;
@@ -365,7 +367,7 @@
       data.teams.forEach((t, idx) => {
         const g = state.groups[idx];
         if (!g) return;
-        const prevDmg = Number(g.damage || 0); g.damage = Number(t.damage ?? 0); if (prevDmg > 0 && g.damage === 0) { g.combo = 0; g.eliminatedOptions = []; state.feedbackMsg = ""; state.feedbackOk = null; }
+        const prevDmg = Number(g.damage || 0); g.damage = Number(t.damage ?? 0); if (prevDmg > 0 && g.damage === 0) { g.combo = 0; g.eliminatedOptions = []; g.wrongAnswers = []; state.feedbackMsg = ""; state.feedbackOk = null; }
         if (t.correctCount !== undefined && t.correctCount !== null) {
           g.correctCount = Number(t.correctCount ?? 0);
         }
@@ -377,6 +379,7 @@
         if (serverRunner >= 1 && serverRunner <= 6) {
           g.currentRunner = serverRunner;
         }
+        if (Array.isArray(t.wrongAnswers)) { g.wrongAnswers = t.wrongAnswers; }
         if (t.question && typeof t.question === "object" && t.question.text) {
           const sameQ = g.question && g.question.id === t.question.id && g.question.text === t.question.text;
           g.question = Object.assign({}, t.question, {
@@ -518,7 +521,7 @@
               <div class="flex items-center gap-3">
                 <span class="px-3 py-1.5 rounded-xl ${g.badgeBg || "bg-indigo-600"} text-white font-black text-base md:text-lg">${g.name} · ${g.team}</span>
                 <div>
-                  <div class="text-xs text-slate-300 font-bold">${playerPrefix}目前第 ${curRunner} 棒（答對一題換一棒）· 已答對 ${Number(g.correctCount || 0)} 題</div>
+                  <div class="text-xs text-slate-300 font-bold">${playerPrefix}目前第 ${curRunner} 棒（答對一題換一棒）</div>
                   <div class="text-xl md:text-2xl font-black text-rose-400">⚔️ 本組輸出：${Number(g.damage || 0).toLocaleString()} 點</div>
                 </div>
               </div>
@@ -597,7 +600,7 @@
                 </div>
                 <div class="text-right">
                   <span class="font-black text-emerald-300">${(grp.damage || 0).toLocaleString()} 點</span>
-                  <span class="text-xs text-slate-400 ml-2">該組共答對 ${Number(grp.correctCount || 0)} 題</span>
+                  
                 </div>
               </div>
             `).join("")}

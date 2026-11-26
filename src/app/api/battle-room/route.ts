@@ -6,6 +6,7 @@ const MAX_HP = 10000;
 interface TeamState {
   name: string;
   damage: number;
+  wrongAnswers?: Array<{ id?: string; text: string; chosen?: string | number; answer?: string | number; category?: string; hint?: string }>;
   runner: number;
   runnerCount: number;
   combo?: number;
@@ -43,6 +44,7 @@ function createInitialRoom(room: string): RoomState {
     teams: TEAM_NAMES.map((name) => ({
       name,
       damage: 0,
+    wrongAnswers: [],
       correctCount: 0,
       runner: 1,
       runnerCount: 6,

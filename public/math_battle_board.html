@@ -44,7 +44,6 @@
         ...meta,
         runnerCount: TEAM_SIZE,
         damage: 0,
-        correctCount: 0,
         currentRunner: 1,
         ultimateCount: 0
       }));
@@ -77,7 +76,6 @@
       const actualDmg = Math.min(state.hp, totalAttempt);
 
       g.damage += actualDmg;
-      g.correctCount += 1;
       state.hp = Math.max(0, state.hp - actualDmg);
       state.monsterHit = true;
 
@@ -178,7 +176,7 @@
                   <div class="text-sm text-slate-400 font-bold">總輸出傷害</div>
                 </div>
                 <div class="mt-4 pt-3 border-t border-slate-800 flex flex-col gap-1 text-sm font-bold">
-                                    <div class="text-slate-300">✅ 該組共答對 ${Number(g.correctCount || 0)} 題</div>
+                                    
                 </div>
               </div>
             `).join('')}
@@ -324,7 +322,7 @@
                     <div class="grid grid-cols-1 gap-1.5">
                       <button type="button" onclick="applyManualHit(${g.id}, 240)" ${state.paused ? 'disabled' : ''}
                         class="w-full py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-black text-xs xl:text-sm cursor-pointer transition">
-                  <div class="text-slate-300">✅ 該組共答對 ${Number(g.correctCount || 0)} 題</div>
+                  
                       </button>
                     </div>
                   </div>
@@ -397,140 +395,13 @@
         const g = state.groups[idx];
         if (!g) return;
         g.damage = Number(t.damage ?? g.damage ?? 0);
-        g.correctCount = Number(t.correctCount ?? g.correctCount ?? 0);
         g.runnerCount = Number(t.runnerCount ?? g.runnerCount ?? TEAM_SIZE);
         g.currentRunner = Number(t.runner ?? g.currentRunner ?? 1);
       });
     }
 
     async function syncRoomFromServer() {
-      if (Date.now() - lastLocalActionAt < 1800) return;
-      if (isUserInteractingWithSelect()) return;
-      try {
-        const res = await fetch('/api/battle-room?room=' + encodeURIComponent(ROOM_ID), {
-          cache: 'no-store',
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (Date.now() - lastLocalActionAt < 1800) return;
-        applyServerRoomState(data);
-        safeRenderBoard();
-      } catch (err) {
-        console.error('Board sync error:', err);
-      }
-    }
-
-    async function postRoomAction(payload) {
-      lastLocalActionAt = Date.now();
-      try {
-        const res = await fetch('/api/battle-room', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(Object.assign({ room: ROOM_ID }, payload)),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          applyServerRoomState(data);
-          safeRenderBoard();
-        }
-      } catch (err) {
-        console.error('Board action sync error:', err);
-      }
-    }
-
-    const _baseResetFn = window.resetBoard;
-    window.resetBoard = function (newMaxHp) {
-      lastLocalActionAt = Date.now();
-      if (typeof _baseResetFn === 'function') {
-        _baseResetFn(newMaxHp);
-      }
-      const targetMaxHp = Number(newMaxHp ?? state.maxHp ?? 10000);
-      state.maxHp = targetMaxHp;
-      state.hp = targetMaxHp;
-      state.paused = false;
-      state.started = false;
-      state.ended = false;
-      if (Array.isArray(state.groups)) {
-        state.groups.forEach(g => {
-          g.damage = 0;
-          g.correctCount = 0;
-          g.currentRunner = 1;
-        });
-      }
-      safeRenderBoard();
-      return postRoomAction({ action: 'reset', maxHp: targetMaxHp });
-    };
-
-    const _baseAdjustFn = window.adjustRunnerCount;
-    window.adjustRunnerCount = function (groupId, delta) {
-      lastLocalActionAt = Date.now();
-      if (typeof _baseAdjustFn === 'function') {
-        _baseAdjustFn(groupId, delta);
-      }
-      const g = state.groups.find(item => item.id === groupId);
-      if (g) {
-        postRoomAction({
-          action: 'adjustRunnerCount',
-          teamIndex: g.id - 1,
-          runnerCount: g.runnerCount,
-        });
-      }
-    };
-
-    document.addEventListener('focusout', (e) => {
-      if (e.target && e.target.tagName === 'SELECT') {
-        setTimeout(syncRoomFromServer, 200);
-      }
-    });
-
-    syncRoomFromServer();
-    setInterval(syncRoomFromServer, 4000);
-  
-    window.resetBoard = function (newMaxHp) {
-      lastLocalActionAt = Date.now();
-      const targetMaxHp = Number(newMaxHp ?? state.maxHp ?? 10000);
-      state.maxHp = targetMaxHp;
-      state.hp = targetMaxHp;
-      state.paused = false;
-      state.started = false;
-      state.ended = false;
-      if (Array.isArray(state.groups)) {
-        state.groups.forEach(function (g) {
-          g.damage = 0;
-          g.correctCount = 0;
-          g.currentRunner = 1;
-        });
-      }
-      safeRenderBoard();
-      fetch('/api/battle-room', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-        body: JSON.stringify({
-          room: ROOM_ID,
-          action: 'reset',
-          maxHp: targetMaxHp,
-        }),
-      })
-        .then(function (res) { return res.ok ? res.json() : null; })
-        .then(function (data) {
-          if (data && Array.isArray(data.teams)) {
-            applyServerRoomState(data);
-            safeRenderBoard();
-          }
-        })
-        .catch(function (err) {
-          console.error('Reset sync error:', err);
-        });
-    };
-  
-    window.startBattleRoom = function () {
-      lastLocalActionAt = Date.now();
-      state.started = true;
-      state.paused = false;
-      safeRenderBoard();
-      return postRoomAction({ action: 'start' });
-    };
-  </script>
+      if (Date.now() - lastLocalActionAt 
+<div id="board-wrong-summary" class="mt-6 bg-slate-900/90 border border-rose-500/40 rounded-2xl p-5 text-left"><div class="text-base font-black text-rose-300 mb-3">\u274c \u5404\u7d44\u932f\u984c\u7d71\u8a08\u8207\u660e\u7d30</div><div id="board-wrong-summary-list" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm"></div></div><script>(function(){function renderBoardWrongSummary(){var container=document.getElementById("board-wrong-summary-list");if(!container)return;var teams=Array.isArray(window.state&&window.state.teams)?window.state.teams:(Array.isArray(window.teams)?window.teams:[]);if(!teams.length){container.innerHTML="<div class='text-slate-400'>\u5c1a\u7121\u7d44\u5225\u8cc7\u6599</div>";return;}container.innerHTML=teams.map(function(tm,i){var list=Array.isArray(tm.wrongAnswers)?tm.wrongAnswers:[];var itemsHtml=list.length?list.map(function(w,idx){var hintTxt=w.hint?" \u00b7 \u63d0\u793a\uff1a"+w.hint:"";return "<li class='text-xs text-slate-200 leading-relaxed'>"+(idx+1)+". "+(w.text||w.id||"\u984c\u76ee")+" <span class='text-rose-300'>(\u9078\uff1a"+(w.chosen??"-")+" / \u6b63\u89e3\uff1a"+(w.answer??"-")+")</span><span class='text-amber-300'>"+hintTxt+"</span></li>";}).join(""):"<li class='text-xs text-emerald-300'>\u672c\u7d44\u76ee\u524d\u7121\u932f\u984c\uff01</li>";return "<div class='p-3.5 rounded-xl bg-slate-800/80 border border-slate-700'><div class='font-black text-white mb-1.5'>"+(tm.name||("\u7b2c"+(i+1)+"\u7d44"))+" \u00b7 <span class='text-rose-400'>\u932f "+list.length+" \u984c</span></div><ul class='space-y-1 pl-1'>"+itemsHtml+"</ul></div>";}).join("");}setInterval(renderBoardWrongSummary,1000);document.addEventListener("DOMContentLoaded",renderBoardWrongSummary);})();</script>
 </body>
 </html>
