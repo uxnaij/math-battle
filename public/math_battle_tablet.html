@@ -121,7 +121,6 @@
     }
 
     
-    function guardTabletJoinedState() { try { if (state.joined && (!state.selectedGroupId || !Array.isArray(state.groups) || !state.groups.some(function(g) { return g.id === state.selectedGroupId; }))) { var fg = (Array.isArray(state.groups) && state.groups[0]) ? state.groups[0].id : 1; state.selectedGroupId = fg; } if (state.joined && (!state.myRunnerNo || Number(state.myRunnerNo) < 1 || Number(state.myRunnerNo) > 6)) { state.myRunnerNo = 1; } } catch (_) {} }
     function render() {
       guardTabletJoinedState();
       const root = document.getElementById('app');
@@ -144,7 +143,6 @@
         state.ended ? 1 : 0,
         state.showSummary ? 1 : 0,
         state.hp,
-        state.myRunnerNo,
         g ? g.currentRunner : 0,
         g ? g.damage : 0,
         g ? (g.combo || 0) : 0,
@@ -230,7 +228,6 @@
             startedAt: sameQ && g.question.startedAt ? g.question.startedAt : (t.question.startedAt || Date.now()),
           });
           g.eliminatedOptions = Array.isArray(t.eliminatedOptions) ? t.eliminatedOptions : [];
-        } else if (state.started && g.question && (state.myRunnerNo || 1) === (g.currentRunner || 1)) {
           syncGroupQuestionToServer(g);
         }
       });
