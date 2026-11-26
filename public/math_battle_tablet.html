@@ -658,6 +658,7 @@
     }
 
     
+    function guardTabletJoinedState() { try { if (state.joined && (!state.selectedGroupId || !Array.isArray(state.groups) || !state.groups.some(function(g) { return g.id === state.selectedGroupId; }))) { var fg = (Array.isArray(state.groups) && state.groups[0]) ? state.groups[0].id : 1; state.selectedGroupId = fg; } if (state.joined && (!state.myRunnerNo || Number(state.myRunnerNo) < 1 || Number(state.myRunnerNo) > 6)) { state.myRunnerNo = 1; } } catch (_) {} }
     function render() {
       guardTabletJoinedState();
       const root = document.getElementById('app');
