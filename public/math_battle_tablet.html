@@ -121,6 +121,7 @@
     }
 
     
+        function guardTabletJoinedState() { try { if (state.joined && (!state.selectedGroupId || !Array.isArray(state.groups) || !state.groups.some(function(g) { return g.id === state.selectedGroupId; }))) { var fg = (Array.isArray(state.groups) && state.groups[0]) ? state.groups[0].id : 1; state.selectedGroupId = fg; } if (state.joined && (!state.myRunnerNo || Number(state.myRunnerNo) < 1 || Number(state.myRunnerNo) > 6)) { state.myRunnerNo = 1; } } catch (_) {} }
     function render() {
       guardTabletJoinedState();
       const root = document.getElementById('app');
@@ -241,6 +242,7 @@
         if (!res.ok) return;
         const data = await res.json();
         state.submittingAnswer = false;
+        state.submittingAnswer = false;
         applyServerRoomStateToTablet(data);
         if (state.joined && !isTabletControlFocused()) {
           render();
@@ -272,6 +274,7 @@
           const data = await res.json();
           const localQ = grp ? grp.question : null;
           state.submittingAnswer = false;
+        state.submittingAnswer = false;
         applyServerRoomStateToTablet(data);
           // 若後端尚未帶回剛抽出的新題目，保留本機最新題目並補同步
           if (grp && localQ && (!data.teams || !data.teams[groupId - 1] || !data.teams[groupId - 1].question)) {
