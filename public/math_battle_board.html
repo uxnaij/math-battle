@@ -320,10 +320,7 @@
                     </div>
 
                     <div class="grid grid-cols-1 gap-1.5">
-                      <button type="button" onclick="applyManualHit(${g.id}, 240)" ${state.paused ? 'disabled' : ''}
-                        class="w-full py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-black text-xs xl:text-sm cursor-pointer transition">
-                  
-                      </button>
+                      <button type="button" onclick="applyManualHit(${g.id}, 240)" ${state.paused ? 'disabled' : ''} class="w-full py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-black text-xs xl:text-sm cursor-pointer transition">⚔️ 推進棒次（+240）</button>
                     </div>
                   </div>
                 </div>
@@ -403,6 +400,10 @@
 
     async function syncRoomFromServer() {
       if (Date.now() - lastLocalActionAt 
-<div id="board-wrong-summary" class="mt-6 bg-slate-900/90 border border-rose-500/40 rounded-2xl p-5 text-left"><div class="text-base font-black text-rose-300 mb-3">\u274c \u5404\u7d44\u932f\u984c\u7d71\u8a08\u8207\u660e\u7d30</div><div id="board-wrong-summary-list" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm"></div></div><script>(function(){function renderBoardWrongSummary(){var container=document.getElementById("board-wrong-summary-list");if(!container)return;var teams=Array.isArray(window.state&&window.state.teams)?window.state.teams:(Array.isArray(window.teams)?window.teams:[]);if(!teams.length){container.innerHTML="<div class='text-slate-400'>\u5c1a\u7121\u7d44\u5225\u8cc7\u6599</div>";return;}container.innerHTML=teams.map(function(tm,i){var list=Array.isArray(tm.wrongAnswers)?tm.wrongAnswers: [];var itemsHtml=list.length?list.map(function(w,idx){var hintTxt=w.hint?" \u00b7 \u63d0\u793a\uff1a"+w.hint:"";return "<li class='text-xs text-slate-200 leading-relaxed'>"+(idx+1)+". "+(w.text||w.id||"\u984c\u76ee")+" <span class='text-rose-300'>(\u9078\uff1a"+(w.chosen??"-")+" / \u6b63\u89e3\uff1a"+(w.answer??"-")+")</span><span class='text-amber-300'>"+hintTxt+"</span></li>";}).join(""):"<li class='text-xs text-emerald-300'>\u672c\u7d44\u76ee\u524d\u7121\u932f\u984c\uff01</li>";return "<div class='p-3.5 rounded-xl bg-slate-800/80 border border-slate-700'><div class='font-black text-white mb-1.5'>"+(tm.name||("\u7b2c"+(i+1)+"\u7d44"))+" \u00b7 <span class='text-rose-400'>\u932f "+list.length+" \u984c</span></div><ul class='space-y-1 pl-1'>"+itemsHtml+"</ul></div>";}).join("");}setInterval(renderBoardWrongSummary,1000);document.addEventListener("DOMContentLoaded",renderBoardWrongSummary);})();</script>
+<div id="board-wrong-summary" style="max-width:1200px;margin:24px auto;padding:20px;border-radius:16px;background:rgba(15,23,42,0.92);border:1px solid rgba(244,63,94,0.45);color:#f8fafc;">
+  <div style="font-size:18px;font-weight:900;color:#fda4af;margin-bottom:12px;">Wrong Answer Summary by Group</div>
+  <div id="board-wrong-summary-list" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;"></div>
+</div>
+<script>(function(){function esc(v){return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}function renderW(){var el=document.getElementById("board-wrong-summary-list");if(!el)return;var teams=(window.state&&Array.isArray(window.state.teams))?window.state.teams:(Array.isArray(window.teams)?window.teams:[]);if(!teams.length){el.innerHTML="<div style=\"color:#94a3b8;font-size:14px;\">Waiting for room state...</div>";return;}el.innerHTML=teams.map(function(t,i){var list=Array.isArray(t.wrongAnswers)?t.wrongAnswers: [];var items=list.length?list.map(function(w,k){var h=w.hint?" [Hint: "+esc(w.hint)+"]":"";return "<div style=\"font-size:12px;line-height:1.5;margin-bottom:6px;\">"+(k+1)+". "+esc(w.text||w.id||"Q")+" <span style=\"color:#fda4af;\">(Picked: "+esc(w.chosen??"-")+", Ans: "+esc(w.answer??"-")+")</span><span style=\"color:#fcd34d;\">"+h+"</span></div>";}).join(""):"<div style=\"font-size:12px;color:#6ee7b7;\">No wrong answers yet</div>";return "<div style=\"padding:14px;border-radius:12px;background:rgba(30,41,59,0.88);border:1px solid rgba(71,85,105,0.75);\"><div style=\"font-weight:900;margin-bottom:8px;\">"+esc(t.name||("Group "+(i+1)))+" - Wrong: "+list.length+"</div>"+items+"</div>";}).join("");}setInterval(renderW,1000);if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",renderW);}else{renderW();}})();</script>
 </body>
 </html>
