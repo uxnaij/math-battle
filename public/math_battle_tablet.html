@@ -657,7 +657,9 @@
       `;
     }
 
+    
     function render() {
+      guardTabletJoinedState();
       const root = document.getElementById('app');
       if (state.ended) {
         root.innerHTML = renderSummary();
