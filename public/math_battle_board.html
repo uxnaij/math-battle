@@ -399,7 +399,21 @@
     }
 
     async function syncRoomFromServer() {
-      if (Date.now() - lastLocalActionAt 
+      if (Date.now() - lastLocalActionAt < 1200) return;
+      try {
+        const res = await fetch('/api/battle-room?room=' + encodeURIComponent(ROOM_ID), { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        applyServerRoomState(data);
+        safeRenderBoard();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    render();
+    syncRoomFromServer();
+    setInterval(syncRoomFromServer, 1500);
+  </script>
 <div id="board-wrong-summary" style="max-width:1200px;margin:24px auto;padding:20px;border-radius:16px;background:rgba(15,23,42,0.92);border:1px solid rgba(244,63,94,0.45);color:#f8fafc;">
   <div style="font-size:18px;font-weight:900;color:#fda4af;margin-bottom:12px;">Wrong Answer Summary by Group</div>
   <div id="board-wrong-summary-list" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;"></div>
