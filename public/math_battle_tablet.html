@@ -339,6 +339,7 @@
       render();
     }
 
+    function advanceRunnerOnCorrect(grp) { if (!grp) return; const maxR = Math.max(1, Number(grp.runnerCount || (grp.runners && grp.runners.length) || 6)); const cur = Math.max(1, Number(grp.currentRunner || 1)); grp.currentRunner = (cur % maxR) + 1; }
     function handleTabletAnswer(chosenValue) {
       if (!state.started || state.paused || state.ended || !state.joined || state.submittingAnswer) return;
       const _curG = state.groups.find(item => item.id === state.selectedGroupId);
@@ -540,7 +541,7 @@
             onclick="enterTabletBattle(state.selectedGroupId, state.myRunnerNo || 1, state.playerLabel);"
             class="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-lg shadow-xl transition cursor-pointer"
           >
-            🚀 進入挑戰（${selectedGroup.name} · 第 ${curRunner} 棒）
+            🚀 進入挑戰（${selectedGroup.name} · 第 ${curRunner} 棒（\u7b54\u5c0d\u4e00\u984c\u63db\u4e00\u68d2））
           </button>
         </div>
       `;
