@@ -282,7 +282,7 @@
             action: "hit",
             teamIndex: groupId - 1,
             damage: Number(damage || 0),
-            correctCount: Number(correctCount || 0),
+            correctCount: Number(correctCount || 0), correctCountInc: 1,
             advanceRunner: Boolean(advanceRunner),
             runnerCount: 6,
             combo: grp ? Number(grp.combo || 0) : 0,
@@ -365,9 +365,9 @@
       data.teams.forEach((t, idx) => {
         const g = state.groups[idx];
         if (!g) return;
-        g.damage = Math.max(Number(g.damage || 0), Number(t.damage ?? 0));
+        const prevDmg = Number(g.damage || 0); g.damage = Number(t.damage ?? 0); if (prevDmg > 0 && g.damage === 0) { g.combo = 0; g.eliminatedOptions = []; state.feedbackMsg = ""; state.feedbackOk = null; }
         if (t.correctCount !== undefined && t.correctCount !== null) {
-          g.correctCount = Math.max(Number(g.correctCount || 0), Number(t.correctCount || 0));
+          g.correctCount = Number(t.correctCount ?? 0);
         }
         if (t.combo !== undefined && t.combo !== null) {
           g.combo = Number(t.combo || 0);
