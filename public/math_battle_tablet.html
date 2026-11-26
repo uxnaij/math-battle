@@ -283,6 +283,7 @@
       teamRunnerCount: 6,
       paused: false,
       ended: false,
+      submittingAnswer: false,
       soundEnabled: true,
       usedQuestionIds: [],
       bannerText: '請點選答案作答，答對幫所屬組別累積輸出傷害！',
@@ -339,7 +340,7 @@
     }
 
     function handleTabletAnswer(chosenValue) {
-      if (!state.started || state.paused || state.ended || !state.joined) return;
+      if (!state.started || state.paused || state.ended || !state.joined || state.submittingAnswer) return;
       const _curG = state.groups.find(item => item.id === state.selectedGroupId);
       if (_curG && (state.myRunnerNo || 1) !== _curG.currentRunner) return;
       const g = state.groups.find(item => item.id === state.selectedGroupId);
@@ -428,6 +429,7 @@
       teamRunnerCount: 6,
       paused: false,
       ended: false,
+      submittingAnswer: false,
         soundEnabled: state.soundEnabled,
         usedQuestionIds: [],
         bannerText: `【${MODE_LABELS[newMode]}】新回合開始！請派【第 1 棒】出戰！`,
@@ -600,7 +602,7 @@
         const optionsHtml = optionsList.map(function (opt, idx) {
           const letter = ["A", "B", "C", "D"][idx] || String(idx + 1);
           const isEliminated = eliminatedList.includes(opt);
-          const isOptionDisabled = Boolean(!state.started || isEliminated || isFrozen || state.paused || !isMyTurnRunner);
+          const isOptionDisabled = Boolean(!state.started || state.submittingAnswer || isEliminated || isFrozen || state.paused || !isMyTurnRunner);
           const btnClass = isOptionDisabled ? "bg-slate-900/50 border-slate-800 text-slate-500 opacity-50 cursor-not-allowed" : ("bg-slate-800/95 border-slate-600 text-white " + (g.btnHover || "hover:border-amber-400") + " active:scale-[0.98] cursor-pointer");
           return '<button type="button" onclick="handleTabletAnswer(' + opt + ')" ' + (isOptionDisabled ? "disabled" : "") + ' class="w-full flex items-center justify-between px-4 py-4 md:py-5 rounded-2xl border-2 font-black transition ' + btnClass + '"><span class="text-base md:text-lg px-2.5 py-1 rounded-lg bg-slate-950/80 text-slate-300 mr-3 shrink-0">' + letter + '</span><span class="text-3xl sm:text-4xl md:text-5xl flex-1 text-center leading-none">' + opt + '</span></button>';
         }).join("");
@@ -780,6 +782,7 @@
         });
         if (!res.ok) return;
         const data = await res.json();
+        state.submittingAnswer = false;
         applyServerRoomStateToTablet(data);
         if (state.joined && !isTabletControlFocused()) {
           render();
@@ -810,7 +813,8 @@
         if (res.ok) {
           const data = await res.json();
           const localQ = grp ? grp.question : null;
-          applyServerRoomStateToTablet(data);
+          state.submittingAnswer = false;
+        applyServerRoomStateToTablet(data);
           // 若後端尚未帶回剛抽出的新題目，保留本機最新題目並補同步
           if (grp && localQ && (!data.teams || !data.teams[groupId - 1] || !data.teams[groupId - 1].question)) {
             grp.question = localQ;
