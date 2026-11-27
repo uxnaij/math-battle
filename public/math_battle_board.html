@@ -55,6 +55,7 @@
       paused: false,
       started: false,
         ended: false,
+      showQr: false,
       zoomQr: false,
       monsterHit: false,
       bannerText: '📱 請各組拿平板掃描右側 QR Code 進入作答，教師也可直接點擊卡片幫各組加分／推進棒次！',
@@ -138,6 +139,34 @@
         }).catch(() => {});
       }
       render();
+    }
+
+    
+    function toggleQrVisibility() {
+      state.showQr = !state.showQr;
+      if (!state.showQr) {
+        state.zoomQr = false;
+      }
+      if (typeof render === "function") {
+        render();
+      }
+    }
+
+    function interactWithMonster() {
+      if (typeof lastLocalActionAt !== "undefined") {
+        lastLocalActionAt = Date.now();
+      }
+      state.monsterHit = true;
+      state.bannerText = "👹 括號混沌巨獸受到警戒！各組快用平板連擊攻击！";
+      if (typeof render === "function") {
+        render();
+      }
+      setTimeout(() => {
+        state.monsterHit = false;
+        if (typeof render === "function") {
+          render();
+        }
+      }, 360);
     }
 
     function renderQrCodes() {
@@ -776,8 +805,11 @@
 
             <div onclick="state.zoomQr = true; render();" title="點擊放大 QR Code"
               class="bg-white p-3.5 rounded-2xl shadow-lg cursor-pointer hover:scale-[1.03] transition">
-              <div id="board-qr-side"></div>
-            </div>
+              ${state.showQr ? `<div id="board-qr-side" class="w-64 shrink-0 bg-slate-900/90 border border-slate-700 rounded-3xl p-4 flex flex-col items-center justify-center gap-2">
+                <div class="text-xs font-black text-sky-300 tracking-wide">📱 平板加入掃描</div>
+                <canvas id="board-qr-canvas" width="168" height="168" class="rounded-2xl bg-white p-2"></canvas>
+                <div id="board-qr-url" class="text-[11px] text-slate-400 break-all text-center"></div>
+              </div>` : ""}
 
             <div class="w-full">
               <div id="board-qr-url" class="text-[11px] text-slate-400 break-all select-all bg-slate-950/90 border border-slate-800 px-2.5 py-1.5 rounded-xl"></div>
