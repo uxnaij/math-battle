@@ -259,6 +259,7 @@
               </div>
             `).join('')}
           </div>
+" + ("\n          <div class=\"bg-slate-900/95 border border-rose-500/50 rounded-3xl p-6 shadow-xl\">\n            <div class=\"text-xl font-black text-rose-300 mb-4\">❌ 各組錯題統計與明細</div>\n            <div class=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4\">\n              \" + sorted.map(function(grp) {\n                var wrongs = Array.isArray(grp.wrongAnswers) ? grp.wrongAnswers : [];\n                var items = wrongs.length ? wrongs.map(function(w, idx) {\n                  var h = w.hint ? \"<div class=\\\"text-amber-300\\\">提示：\" + String(w.hint).replace(/</g, \"&lt;\") + \"</div>\" : \"\";\n                  return \"<div class=\\\"p-3 rounded-xl bg-slate-950/85 border border-slate-800 text-xs space-y-1\\\"><div class=\\\"font-bold text-slate-100\\\">\" + (idx + 1) + \". \" + String(w.text || w.id || \"題目\").replace(/</g, \"&lt;\") + \"</div><div class=\\\"text-rose-300\\\">作答：\" + String(w.chosen ?? \"-\") + \" ｜ 正解：\" + String(w.answer ?? \"-\") + \"</div>\" + h + \"</div>\";\n                }).join(\"\") : \"<div class=\\\"text-xs text-emerald-300 font-bold\\\">本組目前焯錯題！</div>\";\n                return \"<div class=\\\"p-4 rounded-2xl bg-slate-800/85 border border-slate-700 flex flex-col gap-2\\\"><div class=\\\"font-black text-base text-white flex items-center justify-between\\\"><span>\" + String(grp.name || \"\") + \"（\" + String(grp.team || \"\") + \"）</span><span class=\\\"text-rose-400\\\">錯 \" + wrongs.length + \" 題</span></div><div class=\\\"space-y-2\\\">\" + items + \"</div></div>\";\n              }).join(\"\") + \"\n            </div>\n          </div>\n") + "
         </div>
       `;
     }
@@ -465,7 +466,7 @@
       state.hp = Number(data.hp ?? state.hp);
       state.paused = Boolean(data.paused);
       state.started = Boolean(data.started);
-      if (Date.now() - lastLocalActionAt >= 3000) { state.ended = Boolean(data.ended); }
+      if (Date.now() - lastLocalActionAt >= 2500) { if (Date.now() - lastLocalActionAt >= 3000) { state.ended = Boolean(data.ended); } }
       data.teams.forEach((t, idx) => {
         const g = state.groups[idx];
         if (!g) return;
