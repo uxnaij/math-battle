@@ -107,17 +107,36 @@
     }
 
     function resetBoard(newMaxHp = state.maxHp) {
+      if (typeof lastLocalActionAt !== "undefined") {
+        lastLocalActionAt = Date.now();
+      }
+      const resolvedMaxHp = Math.max(500, Number(newMaxHp || state.maxHp || 10000));
       state = {
-        maxHp: newMaxHp,
-        hp: newMaxHp,
+        maxHp: resolvedMaxHp,
+        hp: resolvedMaxHp,
         paused: false,
-        started: false,
+        started: true,
         ended: false,
         zoomQr: false,
         monsterHit: false,
-        bannerText: `新回合開始（巨獸血量 ${newMaxHp.toLocaleString()}）！各組平板準備開戰！`,
-        groups: initGroups()
+        bannerText: "新回合開始（巨獸血量 " + resolvedMaxHp.toLocaleString() + "）！各組平板準備開戰！",
+        groups: initGroups().map((g) => Object.assign({}, g, { wrongAnswers: [] }))
       };
+      if (typeof ROOM_ID !== "undefined") {
+        fetch("/api/battle-room", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            room: ROOM_ID,
+            action: "reset",
+            maxHp: resolvedMaxHp,
+            hp: resolvedMaxHp,
+            started: true,
+            ended: false,
+            paused: false
+          })
+        }).catch(() => {});
+      }
       render();
     }
 
@@ -466,12 +485,13 @@
       state.hp = Number(data.hp ?? state.hp);
       state.paused = Boolean(data.paused);
       state.started = Boolean(data.started);
-      if (Date.now() - lastLocalActionAt >= 2500) { if (Date.now() - lastLocalActionAt >= 3000) { state.ended = Boolean(data.ended); } }
+      if (Date.now() - lastLocalActionAt >= 3000 || Boolean(data.ended) === false) {
+        state.ended = Boolean(data.ended);
+      }
       data.teams.forEach((t, idx) => {
         const g = state.groups[idx];
         if (!g) return;
         g.damage = Number(t.damage ?? g.damage ?? 0);
-        if (Array.isArray(t.wrongAnswers)) { g.wrongAnswers = t.wrongAnswers; }
         if (Array.isArray(t.wrongAnswers)) { g.wrongAnswers = t.wrongAnswers; }
         g.runnerCount = Number(t.runnerCount ?? g.runnerCount ?? TEAM_SIZE);
         g.currentRunner = Number(t.runner ?? g.currentRunner ?? 1);
