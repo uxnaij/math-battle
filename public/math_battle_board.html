@@ -239,49 +239,347 @@
       }
     }
 
-    function renderSummary() {
-      const sorted = [...state.groups].sort((a, b) => b.damage - a.damage);
-      const mvp = sorted[0];
+    
+
+    function escSummary(val) {
+
+
+      return String(val == null ? "" : val)
+
+
+        .replace(/&/g, "&amp;")
+
+
+        .replace(/</g, "&lt;")
+
+
+        .replace(/>/g, "&gt;")
+
+
+        .replace(/"/g, "&quot;");
+
+
+    }
+
+
+
+    function renderWrongSummaryCards(sortedGroups) {
+
+
+      const list = Array.isArray(sortedGroups) ? sortedGroups : [];
+
 
       return `
-        <div class="max-w-7xl w-full mx-auto flex-1 flex flex-col justify-center gap-5 py-2">
-          <div class="bg-slate-900/95 border-2 border-amber-400/60 rounded-3xl p-6 flex flex-wrap items-center justify-between gap-4 shadow-2xl">
-            <div>
-              <div class="text-amber-300 text-sm font-black tracking-wider uppercase">CLASSROOM LEADERBOARD · 五組輸出總結算</div>
-              <h1 class="text-3xl md:text-5xl font-black text-white mt-1">
-                ${state.hp <= 0 ? '🎉 括號混沌巨獸已被全班合力擊敗！' : '🏆 本回合各組輸出傷害排行榜'}
-              </h1>
-              <p class="text-slate-200 text-lg md:text-xl mt-2">
-                全班最高輸出：👑 <span class="text-amber-300 font-black">${mvp.name}（${mvp.team}）</span>，累積造成 <span class="text-rose-400 font-black">${mvp.damage.toLocaleString()}</span> 點傷害！
-              </p>
-            </div>
-            <button type="button" onclick="resetBoard();"
-              class="px-6 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xl cursor-pointer shadow-lg">
-              🔄 開啟下一回合
-            </button>
+
+
+        <div class="bg-slate-900/95 border border-rose-500/50 rounded-3xl p-6 shadow-xl">
+
+
+          <div class="text-xl font-black text-rose-300 mb-4">❌ 各組錯題統計與明細</div>
+
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+
+            ${list.map((grp, idx) => {
+
+
+              const wrongs = Array.isArray(grp.wrongAnswers) ? grp.wrongAnswers : [];
+
+
+              const itemsHtml = wrongs.length
+
+
+                ? wrongs.map((w, k) => `
+
+
+                    <div class="p-3 rounded-xl bg-slate-950/85 border border-slate-800 text-xs space-y-1">
+
+
+                      <div class="font-bold text-slate-100">${k + 1}. ${escSummary(w.text || w.id || "題目")}</div>
+
+
+                      <div class="text-rose-300">作答：${escSummary(w.chosen ?? "-")} ｜ 正解：${escSummary(w.answer ?? "-")}</div>
+
+
+                      ${w.hint ? `<div class="text-amber-300">提示：${escSummary(w.hint)}</div>` : ""}
+
+
+                    </div>
+
+
+                  `).join("")
+
+
+                : `<div class="text-xs text-emerald-300 font-bold">本組目前焯錯題！</div>`;
+
+
+              return `
+
+
+                <div class="p-4 rounded-2xl bg-slate-800/85 border border-slate-700 flex flex-col gap-2">
+
+
+                  <div class="font-black text-base text-white flex items-center justify-between">
+
+
+                    <span>${escSummary(grp.name || ("第" + (idx + 1) + "組"))}（${escSummary(grp.team || "")}）</span>
+
+
+                    <span class="text-rose-400">錯 ${wrongs.length} 題</span>
+
+
+                  </div>
+
+
+                  <div class="space-y-2">${itemsHtml}</div>
+
+
+                </div>
+
+
+              `;
+
+
+            }).join("")}
+
+
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-            ${sorted.map((g, idx) => `
-              <div class="rounded-3xl p-5 border-2 flex flex-col justify-between ${idx === 0 ? 'bg-amber-500/15 border-amber-400 scale-[1.02]' : 'bg-slate-900/90 border-slate-700'}">
-                <div>
-                  <div class="flex items-center justify-between gap-2">
-                    <span class="font-black text-2xl text-white">${idx === 0 ? '👑 ' : `#${idx + 1} `}${g.name}</span>
-                    <span class="text-xs px-2.5 py-1 rounded-full ${g.badgeBg} text-white font-black">${g.team}</span>
-                  </div>
-                  <div class="text-4xl font-black text-rose-400 mt-4">${g.damage.toLocaleString()}</div>
-                  <div class="text-sm text-slate-400 font-bold">總輸出傷害</div>
-                </div>
-                <div class="mt-4 pt-3 border-t border-slate-800 flex flex-col gap-1 text-sm font-bold">
-                                    
-                </div>
-              </div>
-            `).join('')}
-          </div>
-" + ("\n          <div class=\"bg-slate-900/95 border border-rose-500/50 rounded-3xl p-6 shadow-xl\">\n            <div class=\"text-xl font-black text-rose-300 mb-4\">❌ 各組錯題統計與明細</div>\n            <div class=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4\">\n              \" + sorted.map(function(grp) {\n                var wrongs = Array.isArray(grp.wrongAnswers) ? grp.wrongAnswers : [];\n                var items = wrongs.length ? wrongs.map(function(w, idx) {\n                  var h = w.hint ? \"<div class=\\\"text-amber-300\\\">提示：\" + String(w.hint).replace(/</g, \"&lt;\") + \"</div>\" : \"\";\n                  return \"<div class=\\\"p-3 rounded-xl bg-slate-950/85 border border-slate-800 text-xs space-y-1\\\"><div class=\\\"font-bold text-slate-100\\\">\" + (idx + 1) + \". \" + String(w.text || w.id || \"題目\").replace(/</g, \"&lt;\") + \"</div><div class=\\\"text-rose-300\\\">作答：\" + String(w.chosen ?? \"-\") + \" ｜ 正解：\" + String(w.answer ?? \"-\") + \"</div>\" + h + \"</div>\";\n                }).join(\"\") : \"<div class=\\\"text-xs text-emerald-300 font-bold\\\">本組目前焯錯題！</div>\";\n                return \"<div class=\\\"p-4 rounded-2xl bg-slate-800/85 border border-slate-700 flex flex-col gap-2\\\"><div class=\\\"font-black text-base text-white flex items-center justify-between\\\"><span>\" + String(grp.name || \"\") + \"（\" + String(grp.team || \"\") + \"）</span><span class=\\\"text-rose-400\\\">錯 \" + wrongs.length + \" 題</span></div><div class=\\\"space-y-2\\\">\" + items + \"</div></div>\";\n              }).join(\"\") + \"\n            </div>\n          </div>\n") + "
+
         </div>
+
+
       `;
+
+
     }
+
+
+
+    function restartNextRoundOnBoard() {
+
+
+      if (typeof lastLocalActionAt !== "undefined") {
+
+
+        lastLocalActionAt = Date.now();
+
+
+      }
+
+
+      state.ended = false;
+
+
+      state.paused = false;
+
+
+      state.started = true;
+
+
+      state.hp = state.maxHp;
+
+
+      state.bannerText = "新回合開始！各組平板準備作答！";
+
+
+      if (Array.isArray(state.groups)) {
+
+
+        state.groups.forEach((g) => {
+
+
+          g.damage = 0;
+
+
+          g.currentRunner = 1;
+
+
+          g.wrongAnswers = [];
+
+
+        });
+
+
+      }
+
+
+      if (typeof ROOM_ID !== "undefined") {
+
+
+        fetch("/api/battle-room", {
+
+
+          method: "POST",
+
+
+          headers: { "Content-Type": "application/json" },
+
+
+          body: JSON.stringify({
+
+
+            room: ROOM_ID,
+
+
+            action: "reset",
+
+
+            maxHp: state.maxHp,
+
+
+            hp: state.maxHp,
+
+
+            started: true,
+
+
+            ended: false,
+
+
+            paused: false
+
+
+          })
+
+
+        }).catch(() => {});
+
+
+      }
+
+
+      if (typeof render === "function") {
+
+
+        render();
+
+
+      }
+
+
+    }
+
+
+
+    function renderSummary() {
+
+
+      const sorted = [...state.groups].sort((a, b) => b.damage - a.damage);
+
+
+      const mvp = sorted[0];
+
+
+
+      return `
+
+
+        <div class="max-w-7xl w-full mx-auto flex-1 flex flex-col justify-center gap-5 py-2">
+
+
+          <div class="bg-slate-900/95 border-2 border-amber-400/60 rounded-3xl p-6 flex flex-wrap items-center justify-between gap-4 shadow-2xl">
+
+
+            <div>
+
+
+              <div class="text-amber-300 text-sm font-black tracking-wider uppercase">CLASSROOM LEADERBOARD · 五組輸出總結算</div>
+
+
+              <h1 class="text-3xl md:text-5xl font-black text-white mt-1">
+
+
+                ${state.hp <= 0 ? "🎉 括號混沌巨獸已被全班合力擊敗！" : "🏆 本回合各組輸出傷害排行榜"}
+
+
+              </h1>
+
+
+              <p class="text-slate-200 text-lg md:text-xl mt-2">
+
+
+                全班最高輸出：👑 <span class="text-amber-300 font-black">${mvp.name}（${mvp.team}）</span>，累積造成 <span class="text-rose-400 font-black">${mvp.damage.toLocaleString()}</span> 點傷害！
+
+
+              </p>
+
+
+            </div>
+
+
+            <button type="button" onclick="restartNextRoundOnBoard();"
+
+
+              class="px-6 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xl cursor-pointer shadow-lg">
+
+
+              🔄 開啟下一回合
+
+
+            </button>
+
+
+          </div>
+
+
+
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+
+
+            ${sorted.map((g, idx) => `
+
+
+              <div class="rounded-3xl p-5 border-2 flex flex-col justify-between ${idx === 0 ? "bg-amber-500/15 border-amber-400 scale-[1.02]" : "bg-slate-900/90 border-slate-700"}">
+
+
+                <div>
+
+
+                  <div class="flex items-center justify-between gap-2">
+
+
+                    <span class="font-black text-xl text-white">${idx === 0 && g.damage > 0 ? "👑 " : "#" + (idx + 1) + " "}${g.name}</span>
+
+
+                    <span class="text-xs font-black px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200">${g.team}</span>
+
+
+                  </div>
+
+
+                  <div class="text-3xl font-black text-rose-400 mt-3">${g.damage.toLocaleString()}</div>
+
+
+                  <div class="text-xs text-slate-400 font-bold mt-0.5">總輸出傷害</div>
+
+
+                </div>
+
+
+              </div>
+
+
+            `).join("")}
+
+
+          </div>
+
+
+
+          ${renderWrongSummaryCards(sorted)}
+
+
+        </div>
+
+
+      `;
+
+
+    }
+
+
 
     function renderBoard() {
       const hpPct = Math.max(0, Math.min(100, (state.hp / state.maxHp) * 100));
