@@ -162,11 +162,18 @@ export async function POST(req: NextRequest) {
   if (action === "syncQuestion") {
     const teamIndex = Number(body.teamIndex ?? 0);
     const team = state.teams[teamIndex];
-    if (team && body.question && typeof body.question === "object") {
-      if (typeof body.combo === "number" && !Number.isNaN(body.combo)) { team.combo = Math.max(0, Math.floor(body.combo)); }
-      team.question = body.question;
+    if (team) {
+      if (typeof body.combo === "number" && !Number.isNaN(body.combo)) {
+        team.combo = Math.max(0, Math.floor(body.combo));
+      }
+      if (body.question && typeof body.question === "object") {
+        team.question = body.question;
+      }
       if (Array.isArray(body.eliminatedOptions)) {
         team.eliminatedOptions = body.eliminatedOptions;
+      }
+      if (Array.isArray(body.wrongAnswers)) {
+        team.wrongAnswers = body.wrongAnswers.filter((item: NonNullable<TeamState["wrongAnswers"]>[number]): item is NonNullable<TeamState["wrongAnswers"]>[number] => Boolean(item && typeof item === "object"));
       }
       await saveRoom(state);
     }
