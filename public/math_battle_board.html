@@ -208,6 +208,8 @@
       if (typeof lastLocalActionAt !== "undefined") {
         lastLocalActionAt = Date.now();
       }
+      lastStartActionAt = Date.now();
+      lastStartActionAt = Date.now();
       state.started = true;
       state.paused = false;
       state.ended = false;
@@ -226,7 +228,15 @@
             ended: false,
             paused: false
           })
-        }).catch(() => {});
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data) => {
+            if (data && typeof applyServerRoomState === "function") {
+              applyServerRoomState(data);
+              if (typeof render === "function") render();
+            }
+          })
+          .catch(() => {});
       }
       if (typeof render === "function") {
         render();
@@ -790,6 +800,7 @@
     }
     const ROOM_ID = (new URLSearchParams(window.location.search).get('room') || '506').trim() || '506';
     let lastLocalActionAt = 0;
+    let lastStartActionAt = 0;
 
     function isUserInteractingWithSelect() {
       const active = document.activeElement;
@@ -812,7 +823,9 @@
       state.maxHp = Number(data.maxHp ?? state.maxHp ?? 10000);
       state.hp = Number(data.hp ?? state.hp);
       state.paused = Boolean(data.paused);
-      state.started = Boolean(data.started);
+      if (Date.now() - lastStartActionAt >= 4000) {
+        state.started = Boolean(data.started);
+      }
       if (Date.now() - lastLocalActionAt >= 3000 || Boolean(data.ended) === false) {
         state.ended = Boolean(data.ended);
       }
