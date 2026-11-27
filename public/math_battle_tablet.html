@@ -380,6 +380,9 @@
           g.currentRunner = serverRunner;
         }
         if (Array.isArray(t.wrongAnswers)) { g.wrongAnswers = t.wrongAnswers; }
+        if (t.question && g.question && (t.question.id || t.question.text) !== (g.question.id || g.question.text)) {
+          delete g.question._shuffledOptions;
+        }
         if (t.question && typeof t.question === "object" && t.question.text) {
           const sameQ = g.question && g.question.id === t.question.id && g.question.text === t.question.text;
           g.question = Object.assign({}, t.question, {
@@ -453,6 +456,17 @@
       `;
     }
 
+    function shuffleOptionsArray(arr) {
+      const list = Array.isArray(arr) ? arr.slice() : [];
+      for (let i = list.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = list[i];
+        list[i] = list[j];
+        list[j] = tmp;
+      }
+      return list;
+    }
+
     function renderTabletBattle() {
       try {
         ensureGroupQuestions();
@@ -489,9 +503,12 @@
           : "";
 
         const eliminatedList = Array.isArray(g.eliminatedOptions) ? g.eliminatedOptions : [];
-        const optionsList = (g.question && Array.isArray(g.question.options) && g.question.options.length)
-          ? g.question.options
-          : ["A", "B", "C", "D"];
+        if (g.question && Array.isArray(g.question.options) && g.question.options.length && !Array.isArray(g.question._shuffledOptions)) {
+          g.question._shuffledOptions = shuffleOptionsArray(g.question.options);
+        }
+        const optionsList = (g.question && Array.isArray(g.question._shuffledOptions) && g.question._shuffledOptions.length)
+          ? g.question._shuffledOptions
+          : [100, 150, 200, 250];
 
         const optionsHtml = optionsList.map((opt, idx) => {
           const letter = ["A", "B", "C", "D"][idx] || String(idx + 1);
