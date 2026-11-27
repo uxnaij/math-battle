@@ -203,6 +203,36 @@
       `;
     }
 
+    
+    function startBattleRoom() {
+      if (typeof lastLocalActionAt !== "undefined") {
+        lastLocalActionAt = Date.now();
+      }
+      state.started = true;
+      state.paused = false;
+      state.ended = false;
+      if (state.hp <= 0) {
+        state.hp = state.maxHp;
+      }
+      state.bannerText = "對戰已開始！各組平板請開始作答！";
+      if (typeof ROOM_ID !== "undefined") {
+        fetch("/api/battle-room", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            room: ROOM_ID,
+            action: "start",
+            started: true,
+            ended: false,
+            paused: false
+          })
+        }).catch(() => {});
+      }
+      if (typeof render === "function") {
+        render();
+      }
+    }
+
     function restartNextRoundOnBoard() {
       if (typeof lastLocalActionAt !== "undefined") {
         lastLocalActionAt = Date.now();
