@@ -114,12 +114,27 @@ export async function POST(req: NextRequest) {
   const state = await loadRoom(room);
 
   if (action === "reset") {
-    const fresh = createInitialRoom(room);
-    await saveRoom(fresh);
-    return NextResponse.json(fresh);
-  }
+      const nextMaxHp = Math.max(500, Number(body.maxHp ?? state.maxHp ?? MAX_HP));
+      const fresh = createInitialRoom(room);
+      fresh.maxHp = nextMaxHp;
+      fresh.hp = nextMaxHp;
+      fresh.ended = false;
+      fresh.paused = false;
+      fresh.started = body.started !== undefined ? Boolean(body.started) : true;
+      await saveRoom(fresh);
+      return NextResponse.json(fresh);
+    }
 
-  if (action === "togglePause") {
+  if (action === "start") {
+      state.ended = false;
+      state.paused = false;
+      state.started = true;
+      if (state.hp <= 0) state.hp = state.maxHp;
+      await saveRoom(state);
+      return NextResponse.json(state);
+    }
+
+    if (action === "togglePause") {
     state.paused = !state.paused;
     await saveRoom(state);
     return NextResponse.json(state);
@@ -166,6 +181,15 @@ export async function POST(req: NextRequest) {
       if (team) {
       if (typeof body.combo === "number" && !Number.isNaN(body.combo)) { team.combo = Math.max(0, Math.floor(body.combo)); }
         team.damage += damage;
+        if (!Array.isArray(team.wrongAnswers)) team.wrongAnswers = [];
+        if (body.wrongAnswer && typeof body.wrongAnswer === "object") {
+          team.wrongAnswers.push(body.wrongAnswer);
+        }
+        if (Array.isArray(body.wrongAnswers)) {
+          for (const item of body.wrongAnswers) {
+            if (item && typeof item === "object") team.wrongAnswers.push(item);
+          }
+        }
         const addCorrect = Math.max(0, Math.floor(Number(body.correctCount ?? 1)));
         team.correctCount = Math.max(0, Math.floor(Number(team.correctCount ?? 0))) + addCorrect;
         state.hp = Math.max(0, state.hp - damage);
